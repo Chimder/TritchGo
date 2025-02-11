@@ -10,6 +10,7 @@ import (
 type EnvVars struct {
 	CLIENT_ID     string
 	CLIENT_SECRET string
+	DB_URL        string
 }
 
 func LoadEnv() EnvVars {
@@ -20,6 +21,7 @@ func LoadEnv() EnvVars {
 
 	client_id := os.Getenv("CLIENT_ID")
 	client_secret := os.Getenv("CLIENT_SECRET")
+	db_url := os.Getenv("DB_URL")
 
 	// isProdStr := os.Getenv("IS_PROD")
 	// isProd, err := strconv.ParseBool(isProdStr)
@@ -30,5 +32,6 @@ func LoadEnv() EnvVars {
 	return EnvVars{
 		CLIENT_ID:     client_id,
 		CLIENT_SECRET: client_secret,
+		DB_URL:        db_url,
 	}
 }

@@ -1,0 +1,21 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "./sqlc/queries"
+    schema: "./sqlc/schema"
+    gen:
+      go:
+        package: "queries"
+        out: "./internal/queries"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_db_tags: true
+        overrides:
+          - db_type: "pg_catalog.timestamp"
+            go_type:
+              import: "time"
+              type: "Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type:
+              import: "time"
+              type: "Time"
