@@ -2,18 +2,13 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"math"
-	"strconv"
-	"sync"
+	"net/http"
 	"time"
-	"tritchgo/config"
+	"tritchgo/internal/handlers"
 	"tritchgo/internal/queries"
+	"tritchgo/internal/routers"
 	"tritchgo/sqlc"
-
-	"github.com/go-resty/resty/v2"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type twitchToken struct {
@@ -22,66 +17,10 @@ type twitchToken struct {
 	TokenType   string `json:"token_type"`
 }
 
-var client_id, client_secret string
-
-var (
-	token        string
-	mu           sync.Mutex
-	client       = resty.New()
-	tokenExpires time.Time
-	isRefreshing bool
-	// cond         = sync.NewCond(&mu)
-)
-
-func getToken() (string, time.Time, error) {
-	tokenResp := &twitchToken{}
-	resp, err := client.R().SetQueryParams(map[string]string{
-		"client_id":     client_id,
-		"client_secret": client_secret,
-		"grant_type":    "client_credentials",
-	}).SetResult(tokenResp).Post("https://id.twitch.tv/oauth2/token")
-
-	if err != nil || resp.StatusCode() != 200 || tokenResp.AccessToken == "" {
-		log.Printf("Err fetch token %v", err)
-		return "", time.Time{}, fmt.Errorf("Err fetch token")
-	}
-
-	safeExpirationTime := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Add(-10 * time.Hour)
-
-	return tokenResp.AccessToken, safeExpirationTime, nil
-}
-
-func getValidToken() (string, error) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if !tokenExpires.IsZero() && time.Now().Before(tokenExpires) {
-		return token, nil
-	}
-
-	newToken, expirationTime, err := getToken()
-	if err != nil {
-		return "", fmt.Errorf("Cant fetch new token: %v", err)
-	}
-
-	token = newToken
-	tokenExpires = expirationTime
-
-	return token, nil
-}
-func nextInterval(duration time.Duration) time.Time {
-	now := time.Now()
-	minutes := now.Minute()
-	nextMinutes := (minutes/int(duration.Minutes()) + 1) * int(duration.Minutes())
-	log.Printf("Minutes: %v", minutes)
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinutes, 0, 0, now.Location())
-}
-
 func main() {
 	context := context.Background()
-	env := config.LoadEnv()
-	client_id = env.CLIENT_ID
-	client_secret = env.CLIENT_SECRET
+
+	twitchHandle := handlers.NewTwitchHandle()
 
 	db, err := sqlc.DBConn(context)
 	sqlc := queries.New(db)
@@ -89,89 +28,19 @@ func main() {
 		log.Fatalf("Fatal conn to db: %v", err)
 	}
 
-	interval := 10 * time.Minute
+	go StartFetchLoop(context, twitchHandle, sqlc)
 
-	for {
-
-		nextTick := nextInterval(interval).Add(-1 * time.Minute)
-		log.Printf("Next TICK: %v", nextTick)
-		time.Sleep(time.Until(nextTick))
-
-		_, err := getValidToken()
-		log.Print("STart Fetch")
-		topGames, err := GetTopGames()
-		if err != nil {
-			log.Println("Err fetch Top Games")
-			return
-		}
-		for _, game := range topGames {
-			streams, err := GetTopStream(game.ID)
-			if err != nil {
-				log.Println("Err fetch Top Games")
-				return
-			}
-			for _, stream := range streams {
-				startedAt, err := time.Parse(time.RFC3339, stream.StartedAt)
-				if err != nil {
-					log.Println("Error parsing started_at:", err)
-					continue
-				}
-
-				now := time.Now().UTC()
-				airtimeDuration := now.Sub(startedAt)
-				airtimeMinutes := int(math.Round(airtimeDuration.Minutes()))
-
-				err = sqlc.InsertStreamStats(context, queries.InsertStreamStatsParams{
-					StreamID:       stream.ID,
-					UserID:         stream.UserID,
-					GameID:         stream.GameID,
-					Date:           pgtype.Date{Time: now, Valid: true},
-					Airtime:        pgtype.Int4{Int32: int32(airtimeMinutes), Valid: true},
-					PeakViewers:    pgtype.Int4{Int32: int32(stream.ViewerCount), Valid: true},
-					AverageViewers: pgtype.Int4{Int32: int32(stream.ViewerCount), Valid: true},
-					HoursWatched:   pgtype.Int4{Int32: 0, Valid: true},
-				})
-				if err != nil {
-					log.Printf("Err Set Top Games to db %v", err)
-					return
-				}
-			}
-		}
-		time.Sleep(2 * time.Minute)
+	r := routers.NewRouter(sqlc)
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
-}
-
-func GetTopGames() ([]Game, error) {
-	var authHeaders = map[string]string{
-		"Client-ID":     client_id,
-		"Authorization": fmt.Sprintf("Bearer %s", token),
+	log.Println("Server started on :8080")
+	err = server.ListenAndServe()
+	if err != nil {
+		log.Fatalf("Server error: %v", err)
 	}
-	topGames := &TopGamesResponse{}
-	respTopGames, err := client.R().SetHeaders(authHeaders).SetQueryParam("first", strconv.Itoa(50)).SetResult(topGames).Get("https://api.twitch.tv/helix/games/top")
-
-	if err != nil || respTopGames.StatusCode() != 200 {
-		return nil, fmt.Errorf("Top Games fetch Err: %v", respTopGames.Error())
-	}
-	return topGames.Data, nil
-
-}
-
-func GetTopStream(gameId string) ([]Stream, error) {
-	var authHeaders = map[string]string{
-		"Client-ID":     client_id,
-		"Authorization": fmt.Sprintf("Bearer %s", token),
-	}
-
-	var topStreamers = &StreamsResponse{}
-	respTopStreamer, err := client.R().SetHeaders(authHeaders).SetQueryParams(map[string]string{
-		"game_id": gameId,
-		"first":   strconv.Itoa(100),
-	}).SetResult(topStreamers).Get("https://api.twitch.tv/helix/streams")
-
-	if err != nil || respTopStreamer.StatusCode() != 200 {
-		return nil, fmt.Errorf("Top Stream fetch Err: %v", respTopStreamer.Error())
-	}
-	return topStreamers.Data, nil
-
 }

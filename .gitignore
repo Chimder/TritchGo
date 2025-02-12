@@ -1,4 +1,8 @@
 .env
 .env*
 
+#
+tmp/
+tmp/*
 /tmp/
+/.tmp

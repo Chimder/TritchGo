@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getStatsByStreamId = `-- name: GetStatsByStreamId :one
+SELECT id, stream_id, user_id, game_id, date, airtime, peak_viewers, average_viewers, hours_watched FROM stream_stats WHERE stream_id = $1
+`
+
+func (q *Queries) GetStatsByStreamId(ctx context.Context, streamID string) (StreamStat, error) {
+	row := q.db.QueryRow(ctx, getStatsByStreamId, streamID)
+	var i StreamStat
+	err := row.Scan(
+		&i.ID,
+		&i.StreamID,
+		&i.UserID,
+		&i.GameID,
+		&i.Date,
+		&i.Airtime,
+		&i.PeakViewers,
+		&i.AverageViewers,
+		&i.HoursWatched,
+	)
+	return i, err
+}
+
+const getStatsByUserId = `-- name: GetStatsByUserId :one
+SELECT id, stream_id, user_id, game_id, date, airtime, peak_viewers, average_viewers, hours_watched FROM stream_stats WHERE user_id = $1
+`
+
+func (q *Queries) GetStatsByUserId(ctx context.Context, userID string) (StreamStat, error) {
+	row := q.db.QueryRow(ctx, getStatsByUserId, userID)
+	var i StreamStat
+	err := row.Scan(
+		&i.ID,
+		&i.StreamID,
+		&i.UserID,
+		&i.GameID,
+		&i.Date,
+		&i.Airtime,
+		&i.PeakViewers,
+		&i.AverageViewers,
+		&i.HoursWatched,
+	)
+	return i, err
+}
+
 const insertStreamStats = `-- name: InsertStreamStats :exec
 INSERT INTO stream_stats (
     stream_id, user_id, game_id, date, airtime, peak_viewers, average_viewers, hours_watched
