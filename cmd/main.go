@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"strconv"
 	"sync"
 	"time"
@@ -54,9 +55,7 @@ func getValidToken() (string, error) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	log.Print("Start Fetch New Token")
 	if !tokenExpires.IsZero() && time.Now().Before(tokenExpires) {
-		log.Print("Token is still valid")
 		return token, nil
 	}
 
@@ -70,23 +69,36 @@ func getValidToken() (string, error) {
 
 	return token, nil
 }
+func nextInterval(duration time.Duration) time.Time {
+	now := time.Now()
+	minutes := now.Minute()
+	nextMinutes := (minutes/int(duration.Minutes()) + 1) * int(duration.Minutes())
+	log.Printf("Minutes: %v", minutes)
+	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinutes, 0, 0, now.Location())
+}
 
 func main() {
 	context := context.Background()
 	env := config.LoadEnv()
 	client_id = env.CLIENT_ID
 	client_secret = env.CLIENT_SECRET
-	///////////////
+
 	db, err := sqlc.DBConn(context)
 	sqlc := queries.New(db)
-	log.Printf("da", sqlc)
-	///////////
 	if err != nil {
 		log.Fatalf("Fatal conn to db: %v", err)
 	}
 
+	interval := 10 * time.Minute
+
 	for {
+
+		nextTick := nextInterval(interval).Add(-1 * time.Minute)
+		log.Printf("Next TICK: %v", nextTick)
+		time.Sleep(time.Until(nextTick))
+
 		_, err := getValidToken()
+		log.Print("STart Fetch")
 		topGames, err := GetTopGames()
 		if err != nil {
 			log.Println("Err fetch Top Games")
@@ -98,37 +110,34 @@ func main() {
 				log.Println("Err fetch Top Games")
 				return
 			}
-			log.Print("Range Steams")
 			for _, stream := range streams {
-				log.Printf("DB FETCHE STERAM: %v", stream.UserID)
 				startedAt, err := time.Parse(time.RFC3339, stream.StartedAt)
 				if err != nil {
 					log.Println("Error parsing started_at:", err)
-					// continue
+					continue
 				}
-				now := time.Now().UTC()
-				date := pgtype.Date{Time: now, Valid: true}
 
-				airtimeMinutes := int(now.Sub(startedAt).Minutes())
+				now := time.Now().UTC()
+				airtimeDuration := now.Sub(startedAt)
+				airtimeMinutes := int(math.Round(airtimeDuration.Minutes()))
 
 				err = sqlc.InsertStreamStats(context, queries.InsertStreamStatsParams{
 					StreamID:       stream.ID,
 					UserID:         stream.UserID,
 					GameID:         stream.GameID,
-					Date:           date,
+					Date:           pgtype.Date{Time: now, Valid: true},
 					Airtime:        pgtype.Int4{Int32: int32(airtimeMinutes), Valid: true},
 					PeakViewers:    pgtype.Int4{Int32: int32(stream.ViewerCount), Valid: true},
 					AverageViewers: pgtype.Int4{Int32: int32(stream.ViewerCount), Valid: true},
 					HoursWatched:   pgtype.Int4{Int32: 0, Valid: true},
 				})
 				if err != nil {
-					log.Println("Err fetch Top Games")
+					log.Printf("Err Set Top Games to db %v", err)
 					return
 				}
 			}
 		}
-
-		time.Sleep(15 * time.Minute)
+		time.Sleep(2 * time.Minute)
 	}
 
 }
@@ -139,7 +148,7 @@ func GetTopGames() ([]Game, error) {
 		"Authorization": fmt.Sprintf("Bearer %s", token),
 	}
 	topGames := &TopGamesResponse{}
-	respTopGames, err := client.R().SetHeaders(authHeaders).SetQueryParam("first", strconv.Itoa(1)).SetResult(topGames).Get("https://api.twitch.tv/helix/games/top")
+	respTopGames, err := client.R().SetHeaders(authHeaders).SetQueryParam("first", strconv.Itoa(50)).SetResult(topGames).Get("https://api.twitch.tv/helix/games/top")
 
 	if err != nil || respTopGames.StatusCode() != 200 {
 		return nil, fmt.Errorf("Top Games fetch Err: %v", respTopGames.Error())
@@ -157,7 +166,7 @@ func GetTopStream(gameId string) ([]Stream, error) {
 	var topStreamers = &StreamsResponse{}
 	respTopStreamer, err := client.R().SetHeaders(authHeaders).SetQueryParams(map[string]string{
 		"game_id": gameId,
-		"first":   strconv.Itoa(3),
+		"first":   strconv.Itoa(100),
 	}).SetResult(topStreamers).Get("https://api.twitch.tv/helix/streams")
 
 	if err != nil || respTopStreamer.StatusCode() != 200 {
