@@ -11,16 +11,10 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-type TwitchToken struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int    `json:"expires_in"`
-	TokenType   string `json:"token_type"`
-}
 
 type TwitchHandle struct {
 	client_id     string
 	client_secret string
-	token         string
 	mu            sync.Mutex
 }
 
