@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 	"tritchgo/db"
-	"tritchgo/internal/handlers"
 	"tritchgo/internal/routers"
 )
 
@@ -19,16 +18,21 @@ type twitchToken struct {
 func main() {
 	context := context.Background()
 
-	twitchHandle := handlers.NewTwitchHandle()
+	// twitchHandle := handlers.NewTwitchHandle()
 
-	// db, err := sqlc.DBConn(context)
-	// sqlc := queries.New(db)
 	db, err := db.DBConn(context)
 	if err != nil {
 		log.Fatalf("Fatal conn to db: %v", err)
 	}
+	// go func() {
+	// 	for {
+	// 		stats := db.Stat()
+	// 		log.Printf("Pool stats: TotalConns=%d, IdleConns=%d, AcquiredConns=%d", stats.TotalConns(), stats.IdleConns(), stats.AcquiredConns())
+	// 		time.Sleep(10 * time.Second)
+	// 	}
+	// }()
 
-	go StartFetchLoop(context, twitchHandle, db)
+	// go StartFetchLoop(context, twitchHandle, db)
 
 	r := routers.NewRouter(db)
 	server := &http.Server{

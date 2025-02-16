@@ -7,7 +7,7 @@ import (
 	"time"
 	"tritchgo/internal/handlers"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func nextInterval(duration time.Duration) time.Time {
@@ -17,9 +17,9 @@ func nextInterval(duration time.Duration) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinutes, 0, 0, now.Location())
 }
 
-func StartFetchLoop(ctx context.Context, twitchHandle *handlers.TwitchHandle, db *pgx.Conn) {
+func StartFetchLoop(ctx context.Context, twitchHandle *handlers.TwitchHandle, db *pgxpool.Pool) {
 	for {
-		interval := 10 * time.Minute
+		interval := 15 * time.Minute
 		nextTick := nextInterval(interval).Add(-1 * time.Minute)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -34,13 +34,15 @@ func StartFetchLoop(ctx context.Context, twitchHandle *handlers.TwitchHandle, db
 	}
 }
 
-func fetchAndStoreTopGames(ctx context.Context, twitchHandle *handlers.TwitchHandle, db *pgx.Conn) error {
+func fetchAndStoreTopGames(ctx context.Context, twitchHandle *handlers.TwitchHandle, db *pgxpool.Pool) error {
 	_, err := twitchHandle.GetValidToken()
 	if err != nil {
 		return err
 	}
 
 	log.Print("Start Fetch")
+	var startTime time.Time
+
 	topGames, err := twitchHandle.GetTopGames()
 	if err != nil {
 		return err
@@ -62,6 +64,7 @@ func fetchAndStoreTopGames(ctx context.Context, twitchHandle *handlers.TwitchHan
 			airtimeDuration := now.Sub(startedAt)
 			airtimeMinutes := int(math.Round(airtimeDuration.Minutes()))
 
+			startTime = time.Now()
 			stringQuery := `INSERT INTO stream_stats (
     stream_id, user_id, game_id, date, airtime, peak_viewers, average_viewers, hours_watched
 ) VALUES (
@@ -72,7 +75,7 @@ DO UPDATE SET
     peak_viewers = GREATEST(stream_stats.peak_viewers, EXCLUDED.peak_viewers),
     average_viewers = ROUND(stream_stats.average_viewers + EXCLUDED.average_viewers) / 2,
     hours_watched = stream_stats.hours_watched + ROUND(EXCLUDED.average_viewers * (EXCLUDED.airtime / 60.0)); `
-			rows, err := db.Exec(ctx, stringQuery, stream.ID,
+			_, err = db.Exec(ctx, stringQuery, stream.ID,
 				stream.UserID,
 				stream.GameID,
 				now,
@@ -81,14 +84,15 @@ DO UPDATE SET
 				stream.ViewerCount,
 				0,
 			)
-			rowsAffected := rows.RowsAffected()
-			log.Printf("success: %d", rowsAffected)
+
 			if err != nil {
 				log.Printf("Err Set Top Games to db %v", err)
 				return err
 			}
 		}
 	}
+	elapsed := time.Since(startTime)
+	log.Printf("time taken: %v", elapsed)
 
 	return nil
 }

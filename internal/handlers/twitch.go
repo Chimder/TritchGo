@@ -11,7 +11,6 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-
 type TwitchHandle struct {
 	client_id     string
 	client_secret string
@@ -38,7 +37,7 @@ func (t *TwitchHandle) GetTopGames() ([]Game, error) {
 		"Authorization": fmt.Sprintf("Bearer %s", token),
 	}
 	topGames := &TopGamesResponse{}
-	respTopGames, err := client.R().SetHeaders(authHeaders).SetQueryParam("first", strconv.Itoa(2)).SetResult(topGames).Get("https://api.twitch.tv/helix/games/top")
+	respTopGames, err := client.R().SetHeaders(authHeaders).SetQueryParam("first", strconv.Itoa(50)).SetResult(topGames).Get("https://api.twitch.tv/helix/games/top")
 
 	if err != nil || respTopGames.StatusCode() != 200 {
 		log.Printf("Unexpected status code: %d, response: %s", respTopGames.StatusCode(), respTopGames.String())
@@ -62,7 +61,7 @@ func (t *TwitchHandle) GetTopStream(gameId string) ([]Stream, error) {
 	var topStreamers = &StreamsResponse{}
 	respTopStreamer, err := client.R().SetHeaders(authHeaders).SetQueryParams(map[string]string{
 		"game_id": gameId,
-		"first":   strconv.Itoa(20),
+		"first":   strconv.Itoa(100),
 	}).SetResult(topStreamers).Get("https://api.twitch.tv/helix/streams")
 
 	if err != nil || respTopStreamer.StatusCode() != 200 {
