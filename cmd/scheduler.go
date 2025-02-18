@@ -33,7 +33,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 3 * time.Minute
+		interval := 15 * time.Minute
 		nextTick := nextInterval(interval).Add(-1 * time.Minute)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -44,7 +44,7 @@ func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 			log.Println("Error in fetchAndStoreTopGames:", err)
 		}
 
-		time.Sleep(2 * time.Minute)
+		time.Sleep(4 * time.Minute)
 	}
 }
 
@@ -62,7 +62,7 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 		return err
 	}
 
-	gameChan := make(chan []handlers.Stream, 100)
+	gameChan := make(chan []handlers.Stream, 55)
 	var wg sync.WaitGroup
 	for _, game := range topGames {
 		wg.Add(1)
@@ -81,11 +81,11 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 
 	go func() {
 		wg.Wait()
-		log.Print("FirstWAITE CLOSe")
 		close(gameChan)
 	}()
 
 	var insertWg sync.WaitGroup
+	var batchMutex sync.Mutex
 	streamBatchInsert := &pgx.Batch{}
 	for streams := range gameChan {
 		for _, stream := range streams {
@@ -97,12 +97,16 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 				if err != nil {
 					log.Println("Error parsing started_at:", err)
 				}
+				batchMutex.Lock()
 				ts.insertStreamStats(&stream, streamBatchInsert, startedAt)
+				batchMutex.Unlock()
 			}(stream)
 		}
 	}
+
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
+
 	for i := 0; i < streamBatchInsert.Len(); i++ {
 		_, err := res.Exec()
 		if err != nil {
@@ -114,12 +118,8 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 		}
 	}
 
-	// log.Printf("BATCHRESl %v", res)
 	insertWg.Wait()
-	log.Print("SECCClllllWAITE CLOSE")
-	elapsed := time.Since(startTime)
-	log.Printf("time taken: %v", elapsed)
-
+	log.Printf("time taken: %v", time.Since(startTime))
 	return nil
 }
 
@@ -150,8 +150,4 @@ DO UPDATE SET
 	}
 
 	streamBatchInsert.Queue(stringQuery, args)
-	// _, err := ts.db.Exec(ts.ctx, stringQuery, args)
-	// if err != nil {
-	// 	log.Printf("Err Set Top Games to db %v", err)
-	// }
 }
