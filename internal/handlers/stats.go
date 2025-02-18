@@ -40,8 +40,7 @@ func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) (*[]Str
 	}
 	defer rows.Close()
 
-	var stats []StreamStats
-	stats, err = pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
+	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
 
 	if err := rows.Err(); err != nil {
 		log.Printf("Error iterating rows: %v", err)
@@ -51,14 +50,14 @@ func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) (*[]Str
 
 func (st *StatsHandler) GetStreamStatsById(ctx context.Context, id string) (*[]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE stream_id = $1`
-	var s []StreamStats
 
 	rows, err := st.db.Query(ctx, query, id)
 	if err != nil {
 		log.Printf("Err fetch stream stats  %v", err)
 		return nil, err
 	}
-	s, err = pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
+
+	s, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, err
