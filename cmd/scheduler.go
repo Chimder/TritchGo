@@ -34,7 +34,7 @@ func nextInterval(duration time.Duration) time.Time {
 func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
 		interval := 15 * time.Minute
-		nextTick := nextInterval(interval).Add(-1 * time.Minute)
+		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
 		time.Sleep(time.Until(nextTick))
@@ -44,7 +44,7 @@ func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 			log.Println("Error in fetchAndStoreTopGames:", err)
 		}
 
-		time.Sleep(4 * time.Minute)
+		time.Sleep(3 * time.Minute)
 	}
 }
 
