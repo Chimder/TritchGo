@@ -31,7 +31,7 @@ type StreamStats struct {
 	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
 }
 
-func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) (*[]StreamStats, error) {
+func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE user_id = $1`
 	rows, err := st.db.Query(ctx, query, id)
 	if err != nil {
@@ -45,10 +45,10 @@ func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) (*[]Str
 	if err := rows.Err(); err != nil {
 		log.Printf("Error iterating rows: %v", err)
 	}
-	return &stats, err
+	return stats, err
 }
 
-func (st *StatsHandler) GetStreamStatsById(ctx context.Context, id string) (*[]StreamStats, error) {
+func (st *StatsHandler) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE stream_id = $1`
 
 	rows, err := st.db.Query(ctx, query, id)
@@ -65,5 +65,5 @@ func (st *StatsHandler) GetStreamStatsById(ctx context.Context, id string) (*[]S
 		log.Printf("Error scanning row: %v", err)
 		return nil, err
 	}
-	return &s, nil
+	return s, nil
 }

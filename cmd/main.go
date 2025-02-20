@@ -14,12 +14,12 @@ func main() {
 	context := context.Background()
 
 	twitchHandle := handlers.NewTwitchHandle()
-
 	db, err := db.DBConn(context)
 	if err != nil {
 		log.Fatalf("Fatal conn to db: %v", err)
 	}
 
+	go StartGRPCServer(db)
 	go NewTwitchSheduler(context, db).StartFetchLoop(twitchHandle)
 
 	r := routers.NewRouter(db)

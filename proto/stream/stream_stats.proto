@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package stream;
+
+option go_package = "./proto/stream";
+
+service StreamStatsService {
+  rpc GetUserStats(UserStatsRequest) returns (UserStatsResponse);
+  rpc GetStreamStats(StreamStatsRequest) returns (StreamStatsResponse);
+}
+
+message UserStatsRequest {
+  string user_id = 1;
+}
+
+message UserStatsResponse {
+  repeated StreamStats stats = 1;
+}
+
+message StreamStatsRequest {
+  string stream_id = 1;
+}
+
+message StreamStatsResponse {
+  repeated StreamStats stats = 1;
+}
+
+message StreamStats {
+  uint64 id = 1;
+  string stream_id = 2;
+  string user_id = 3;
+  string game_id = 4;
+  string date = 5;
+  int32 airtime = 6;
+  int32 peak_viewers = 7;
+  int32 average_viewers = 8;
+  int32 hours_watched = 9;
+}
