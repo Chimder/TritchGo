@@ -1,21 +1,25 @@
 package handlers
 
 import (
-	"context"
+	"encoding/json"
 	"log"
+	"net/http"
 	"time"
+	"tritchgo/internal/store"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StatsHandler struct {
-	db *pgxpool.Pool
+	db    *pgxpool.Pool
+	store *store.Storage
 }
 
 func NewStatsHandler(db *pgxpool.Pool) *StatsHandler {
+	store := store.NewStorage(db)
 	return &StatsHandler{
-		db: db,
+		store: &store,
+		db:    db,
 	}
 }
 
@@ -31,39 +35,34 @@ type StreamStats struct {
 	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
 }
 
-func (st *StatsHandler) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
-	query := `SELECT * FROM stream_stats WHERE user_id = $1`
-	rows, err := st.db.Query(ctx, query, id)
+func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request) {
+	userId := r.URL.Query().Get("user_id")
+
+	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
 	if err != nil {
 		log.Printf("Err fetch user stats  %v", err)
-		return nil, err
+		return
 	}
-	defer rows.Close()
 
-	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
-
-	if err := rows.Err(); err != nil {
-		log.Printf("Error iterating rows: %v", err)
+	err = json.NewEncoder(w).Encode(stats)
+	if err != nil {
+		log.Printf("Err encode user stats  %v", err)
+		return
 	}
-	return stats, err
 }
 
-func (st *StatsHandler) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
-	query := `SELECT * FROM stream_stats WHERE stream_id = $1`
+func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Request) {
+	streamId := r.URL.Query().Get("stream_id")
 
-	rows, err := st.db.Query(ctx, query, id)
+	stats, err := st.store.Stats.GetStreamStatsById(r.Context(), streamId)
 	if err != nil {
-		log.Printf("Err fetch stream stats  %v", err)
-		return nil, err
+		log.Printf("Err encode user stats  %v", err)
+		return
 	}
 
-	s, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
+	err = json.NewEncoder(w).Encode(stats)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, err
-		}
-		log.Printf("Error scanning row: %v", err)
-		return nil, err
+		log.Printf("Err encode user stats  %v", err)
+		return
 	}
-	return s, nil
 }

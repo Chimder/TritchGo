@@ -1,8 +1,6 @@
 package routers
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 	"tritchgo/internal/handlers"
@@ -42,37 +40,9 @@ func NewRouter(db *pgxpool.Pool) *chi.Mux {
 	})
 
 	statsHandle := handlers.NewStatsHandler(db)
-	r.Get("/user/stats", func(w http.ResponseWriter, r *http.Request) {
-		userId := r.URL.Query().Get("user_id")
 
-		stats, err := statsHandle.GetUserStatsById(r.Context(), userId)
-		if err != nil {
-			log.Printf("Err fetch user stats  %v", err)
-			return
-		}
-
-		err = json.NewEncoder(w).Encode(stats)
-		if err != nil {
-			log.Printf("Err encode user stats  %v", err)
-			return
-		}
-	})
-
-	r.Get("/stream/stats", func(w http.ResponseWriter, r *http.Request) {
-		streamId := r.URL.Query().Get("stream_id")
-
-		stats, err := statsHandle.GetStreamStatsById(r.Context(), streamId)
-		if err != nil {
-			log.Printf("Err encode user stats  %v", err)
-			return
-		}
-
-		err = json.NewEncoder(w).Encode(stats)
-		if err != nil {
-			log.Printf("Err encode user stats  %v", err)
-			return
-		}
-	})
+	r.Get("/user/stats", statsHandle.GetUserStatsById)
+	r.Get("/stream/stats", statsHandle.GetStreamStatsById)
 
 	return r
 }

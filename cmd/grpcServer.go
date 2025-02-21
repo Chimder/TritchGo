@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
-	"tritchgo/internal/handlers"
+	"tritchgo/internal/store"
 
 	"tritchgo/proto/stream"
 
@@ -15,17 +15,17 @@ import (
 
 type StatsServer struct {
 	stream.UnimplementedStreamStatsServiceServer
-	db      *pgxpool.Pool
-	handler *handlers.StatsHandler
+	db    *pgxpool.Pool
+	store *store.Storage
 }
 
 func NewStatsServer(ctx context.Context, db *pgxpool.Pool) *StatsServer {
-	statsHandler := handlers.NewStatsHandler(db)
-	return &StatsServer{db: db, handler: statsHandler}
+	statsStore := store.NewStorage(db)
+	return &StatsServer{db: db, store: &statsStore}
 }
 
 func (s *StatsServer) GetUserStats(ctx context.Context, req *stream.UserStatsRequest) (*stream.UserStatsResponse, error) {
-	stats, err := s.handler.GetUserStatsById(ctx, req.UserId)
+	stats, err := s.store.Stats.GetUserStatsById(ctx, req.UserId)
 	if err != nil {
 		log.Printf("Err fetch user stats  %v", err)
 		return nil, err
@@ -50,7 +50,7 @@ func (s *StatsServer) GetUserStats(ctx context.Context, req *stream.UserStatsReq
 }
 
 func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream.StreamStatsRequest) (*stream.StreamStatsResponse, error) {
-	stats, err := s.handler.GetStreamStatsById(ctx, req.StreamId)
+	stats, err := s.store.Stats.GetStreamStatsById(ctx, req.StreamId)
 	if err != nil {
 		return nil, err
 	}
