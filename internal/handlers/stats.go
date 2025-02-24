@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 	"tritchgo/internal/store"
+	"tritchgo/utils"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -44,11 +44,7 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(stats)
-	if err != nil {
-		log.Printf("Err encode user stats  %v", err)
-		return
-	}
+	utils.WriteJSON(w, 200, stats)
 }
 
 func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Request) {
@@ -60,9 +56,6 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(stats)
-	if err != nil {
-		log.Printf("Err encode user stats  %v", err)
-		return
-	}
+	utils.WriteJSON(w, 200, stats)
+
 }

@@ -8,3 +8,9 @@ gpweb:
 
 protoui:
 	grpcui -plaintext localhost:50051
+
+ipwsl:
+	ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1
+
+wrk:
+	wrk -t2 -c100 -d30s http://localhost:8080/go-json-gzip
