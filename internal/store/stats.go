@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -18,7 +19,7 @@ func NewStatsStore(db *pgxpool.Pool) *StatsStore {
 }
 
 type StreamStats struct {
-	ID             int       `json:"id" db:"id"`
+  ID             uuid.UUID `json:"id" db:"id"`
 	StreamID       string    `json:"stream_id" db:"stream_id"`
 	UserID         string    `json:"user_id" db:"user_id"`
 	GameID         string    `json:"game_id" db:"game_id"`

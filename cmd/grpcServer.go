@@ -34,7 +34,7 @@ func (s *StatsServer) GetUserStats(ctx context.Context, req *stream.UserStatsReq
 	var protoStats []*stream.StreamStats
 	for _, stat := range stats {
 		protoStats = append(protoStats, &stream.StreamStats{
-			Id:             uint64(stat.ID),
+			Id:             stat.ID.String(),
 			StreamId:       stat.StreamID,
 			UserId:         stat.UserID,
 			GameId:         stat.GameID,
@@ -57,7 +57,7 @@ func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream.StreamStat
 	var protoStats []*stream.StreamStats
 	for _, stat := range stats {
 		protoStats = append(protoStats, &stream.StreamStats{
-			Id:             uint64(stat.ID),
+			Id:             stat.ID.String(),
 			StreamId:       stat.StreamID,
 			UserId:         stat.UserID,
 			GameId:         stat.GameID,

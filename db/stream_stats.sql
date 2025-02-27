@@ -1,5 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE stream_stats (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     stream_id VARCHAR(255) NOT NULL,
     user_id VARCHAR(255) NOT NULL,
     game_id VARCHAR(255) NOT NULL,
