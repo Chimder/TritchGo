@@ -24,7 +24,7 @@ func DBConn(ctx context.Context) (*pgxpool.Pool, error) {
 
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {
-		log.Fatalf("Failed to parse config: %v", err)
+		log.Fatalf("Failed to parse config DBPOOL: %v", err)
 	}
 
 	config.MaxConns = defaultMaxConns

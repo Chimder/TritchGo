@@ -13,38 +13,71 @@
 
 # volumes:
 #   postgres_data:
-version: '3'
+# version: '3'
+# services:
+#   prometheus:
+#     image: prom/prometheus
+#     container_name: prometheus
+#     ports:
+#       - 9090:9090
+#     volumes:
+#       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#     networks:
+#       - monitoring
+#   grafana:
+#     image: grafana/grafana-oss:latest
+#     container_name: grafana
+#     ports:
+#       - "3000:3000"
+#     environment:
+#       - GF_SECURITY_ADMIN_PASSWORD=admin
+#     networks:
+#       - monitoring
+#     depends_on:
+#       - prometheus
+#   node_exporter:
+#     image: prom/node-exporter:latest
+#     container_name: node_exporter
+#     ports:
+#       - "9100:9100"
+#     networks:
+#       - monitoring
+#     restart: unless-stopped
+
+# networks:
+#   monitoring:
+#     driver: bridge
+
+
 services:
-  prometheus:
-    image: prom/prometheus
-    container_name: prometheus
+  postgres:
+    image: postgres:latest
+    container_name: postgresV2
     ports:
-      - 9090:9090
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - monitoring
-  grafana:
-    image: grafana/grafana-oss:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
+      - "5432:5432"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     networks:
-      - monitoring
+      - tritch-network
+
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    # env_file:
+    #   - .env
+    environment:
+      DB_URL: postgresql://postgres:postgres@postgresV2:5432/postgres?sslmode=disable
+      CLIENT_ID: ${CLIENT_ID}
+      CLIENT_SECRET: ${CLIENT_SECRET}
     depends_on:
-      - prometheus
-  # node_exporter:
-  #   image: prom/node-exporter:latest
-  #   container_name: node_exporter
-  #   ports:
-  #     - "9100:9100"
-  #   networks:
-  #     - monitoring
-  #   restart: unless-stopped
+      - postgres
+    networks:
+      - tritch-network
 
 networks:
-  monitoring:
+  tritch-network:
     driver: bridge
-

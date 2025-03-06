@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"slices"
 )
 
@@ -11,5 +12,6 @@ func main() {
 	s3 := append(s1, s2...)
 	slices.Sort(s3)
 
+	fmt.Print(os.Args)
 	fmt.Println(s3)
 }

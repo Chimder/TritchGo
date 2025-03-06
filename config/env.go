@@ -35,3 +35,42 @@ func LoadEnv() EnvVars {
 		DB_URL:        db_url,
 	}
 }
+
+// package config
+
+// import (
+// 	"log"
+// 	"os"
+// )
+
+// type EnvVars struct {
+// 	CLIENT_ID     string
+// 	CLIENT_SECRET string
+// 	DB_URL        string
+// }
+
+// func LoadEnv() EnvVars {
+// 	clientID := os.Getenv("CLIENT_ID")
+// 	if clientID == "" {
+// 		log.Print("CLIENT_ID is not set")
+// 	}
+
+// 	clientSecret := os.Getenv("CLIENT_SECRET")
+// 	if clientSecret == "" {
+// 		log.Print("CLIENT_SECRET is not set")
+// 	}
+
+// 	dbURL := os.Getenv("DB_URL")
+// 	if dbURL == "" {
+// 		log.Print("DB_URL is not set")
+// 	}
+// 	log.Printf("db", dbURL)
+// 	log.Printf("id", clientID)
+// 	log.Printf("cliek", clientSecret)
+
+// 	return EnvVars{
+// 		CLIENT_ID:     clientID,
+// 		CLIENT_SECRET: clientSecret,
+// 		DB_URL:        dbURL,
+// 	}
+// }
