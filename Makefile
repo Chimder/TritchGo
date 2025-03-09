@@ -16,16 +16,11 @@ wrk:
 	wrk -t2 -c100 -d30s http://localhost:8080/go-json-gzip
 
 apply:
-	@echo "Applying app.yaml..."
 	kubectl apply -f k8s/app.yaml
-
-	@echo "Creating/updating secrets..."
 	kubectl delete secret app-secrets --ignore-not-found
 	kubectl create secret generic app-secrets --from-env-file=.env
 
-# Цель restart: перезапускает поды
 restart:
-	@echo "Restarting deployment..."
 	kubectl rollout restart deployment golang-server
 
 

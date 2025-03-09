@@ -24,7 +24,7 @@ export const options = {
 
 export default function () {
   const urls = [
-    "http://localhost:8080/stream/stats?stream_id=316710800633",
+    "http://localhost:8080/stream/stats?stream_id=314171492459",
     "http://localhost:8080/user/stats?user_id=48189727",
   ];
 
