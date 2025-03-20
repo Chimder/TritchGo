@@ -57,6 +57,7 @@ func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 
 	r.Get("/user/stats", statsHandle.GetUserStatsById)
 	r.Get("/stream/stats", statsHandle.GetStreamStatsById)
+	r.Get("/redis", statsHandle.Test)
 
 	return r
 }

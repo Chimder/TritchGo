@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -23,7 +24,7 @@ func WriteJSONRedis(w http.ResponseWriter, status int, data []byte) {
 
 func WriteError(w http.ResponseWriter, status int, err string) {
 	w.WriteHeader(status)
-
+	log.Print(err)
 	if err := json.NewEncoder(w).Encode(map[string]string{"err": err}); err != nil {
 		http.Error(w, `{"err": err encode error}`, status)
 	}

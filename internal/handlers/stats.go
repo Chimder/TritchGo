@@ -39,6 +39,30 @@ type StreamStats struct {
 	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
 }
 
+func (st *StatsHandler) Test(w http.ResponseWriter, r *http.Request) {
+	newmap := map[string]string{"test1": "lox", "test2": "lox2"}
+	cache, err := st.rdb.HGetAll(r.Context(), "test").Result()
+	if err != nil {
+		log.Print("Redis error:", err)
+	}
+
+	if len(cache) > 0 {
+		log.Print("from cache")
+		utils.WriteJSON(w, 200, cache)
+		return
+	}
+
+	log.Print("start set")
+	err = st.rdb.HSet(r.Context(), "test", newmap).Err()
+	if err != nil {
+		utils.WriteError(w, 500, "Err fetch user stats")
+		return
+	}
+	st.rdb.Expire(r.Context(), "test", 30*time.Second)
+	log.Print("form map")
+	utils.WriteJSON(w, 200, newmap)
+}
+
 func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 
@@ -50,7 +74,6 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 
 	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
 	if err != nil {
-		log.Printf("Error fetch user stats: %v", err)
 		utils.WriteError(w, 500, "Err fetch user stats")
 		return
 	}
@@ -61,7 +84,7 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		utils.WriteError(w, 500, "Failed to marsh data")
 		return
 	}
-	if err := st.rdb.Set(r.Context(), userId, data, 1*time.Minute).Err(); err != nil {
+	if err := st.rdb.Set(r.Context(), userId, data, 30*time.Second).Err(); err != nil {
 		log.Printf("Err cache user stats: %v", err)
 	}
 	utils.WriteJSONRedis(w, 200, data)
@@ -88,7 +111,7 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 		utils.WriteError(w, 500, "Failed to marsh data")
 		return
 	}
-	if err = st.rdb.Set(r.Context(), streamId, data, 1*time.Minute).Err(); err != nil {
+	if err = st.rdb.Set(r.Context(), streamId, data, 30*time.Second).Err(); err != nil {
 		log.Printf("Err cache user stats: %v", err)
 	}
 	utils.WriteJSONRedis(w, 200, data)

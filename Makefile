@@ -42,11 +42,19 @@ apply:
 restart:
 	kubectl rollout restart deployment golang-server
 
+ipwsl:
+	ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1
+
 getPostgresIp:
 	docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' my-postgres
 
-ipwsl:
-	ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1
+# tests
+vegeta:
+	vegeta attack -duration=1m -rate=500 -targets=tess/vegeta/target.list -output=tess/vegeta/attack.bin
+
+vegeta-res:
+	vegeta plot -title=Attack%20Results tess/vegeta/attack.bin > tess/vegeta/results.html
+
 
 wrk:
 	wrk -t2 -c100 -d30s http://localhost:8080/go-json-gzip
