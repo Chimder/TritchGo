@@ -6,7 +6,7 @@ import (
 	"net"
 	"tritchgo/internal/store"
 
-	"tritchgo/proto/stream"
+	"tritchgo/proto/stream_stats"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
@@ -14,7 +14,7 @@ import (
 )
 
 type StatsServer struct {
-	stream.UnimplementedStreamStatsServiceServer
+	stream_stats.UnimplementedStreamStatsServiceServer
 	db    *pgxpool.Pool
 	store *store.Storage
 }
@@ -24,16 +24,16 @@ func NewStatsServer(ctx context.Context, db *pgxpool.Pool) *StatsServer {
 	return &StatsServer{db: db, store: &statsStore}
 }
 
-func (s *StatsServer) GetUserStats(ctx context.Context, req *stream.UserStatsRequest) (*stream.UserStatsResponse, error) {
+func (s *StatsServer) GetUserStats(ctx context.Context, req *stream_stats.UserStatsRequest) (*stream_stats.UserStatsResponse, error) {
 	stats, err := s.store.Stats.GetUserStatsById(ctx, req.UserId)
 	if err != nil {
 		log.Printf("Err fetch user stats  %v", err)
 		return nil, err
 	}
 
-	var protoStats []*stream.StreamStats
+	var protoStats []*stream_stats.StreamStats
 	for _, stat := range stats {
-		protoStats = append(protoStats, &stream.StreamStats{
+		protoStats = append(protoStats, &stream_stats.StreamStats{
 			Id:             stat.ID.String(),
 			StreamId:       stat.StreamID,
 			UserId:         stat.UserID,
@@ -46,17 +46,17 @@ func (s *StatsServer) GetUserStats(ctx context.Context, req *stream.UserStatsReq
 		})
 	}
 
-	return &stream.UserStatsResponse{Stats: protoStats}, nil
+	return &stream_stats.UserStatsResponse{Stats: protoStats}, nil
 }
 
-func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream.StreamStatsRequest) (*stream.StreamStatsResponse, error) {
+func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream_stats.StreamStatsRequest) (*stream_stats.StreamStatsResponse, error) {
 	stats, err := s.store.Stats.GetStreamStatsById(ctx, req.StreamId)
 	if err != nil {
 		return nil, err
 	}
-	var protoStats []*stream.StreamStats
+	var protoStats []*stream_stats.StreamStats
 	for _, stat := range stats {
-		protoStats = append(protoStats, &stream.StreamStats{
+		protoStats = append(protoStats, &stream_stats.StreamStats{
 			Id:             stat.ID.String(),
 			StreamId:       stat.StreamID,
 			UserId:         stat.UserID,
@@ -69,7 +69,7 @@ func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream.StreamStat
 		})
 
 	}
-	return &stream.StreamStatsResponse{Stats: protoStats}, nil
+	return &stream_stats.StreamStatsResponse{Stats: protoStats}, nil
 }
 
 func StartGRPCServer(db *pgxpool.Pool) {
@@ -79,7 +79,7 @@ func StartGRPCServer(db *pgxpool.Pool) {
 	}
 
 	grpcServer := grpc.NewServer()
-	stream.RegisterStreamStatsServiceServer(grpcServer, NewStatsServer(context.Background(), db))
+	stream_stats.RegisterStreamStatsServiceServer(grpcServer, NewStatsServer(context.Background(), db))
 	reflection.Register(grpcServer)
 
 	log.Println("gRPC is running on port 50051...")

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -8,18 +9,21 @@ import (
 	"tritchgo/utils"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type StatsHandler struct {
-	db    *pgxpool.Pool
+	pgdb  *pgxpool.Pool
 	store *store.Storage
+	rdb   *redis.Client
 }
 
-func NewStatsHandler(db *pgxpool.Pool) *StatsHandler {
+func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
 	store := store.NewStorage(db)
 	return &StatsHandler{
 		store: &store,
-		db:    db,
+		pgdb:  db,
+		rdb:   rdb,
 	}
 }
 
@@ -38,24 +42,54 @@ type StreamStats struct {
 func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
 
-	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
-	if err != nil {
-		log.Printf("Err fetch user stats  %v", err)
+	cacheData, err := st.rdb.Get(r.Context(), userId).Result()
+	if err == nil {
+		utils.WriteJSONRedis(w, 200, []byte(cacheData))
 		return
 	}
 
-	utils.WriteJSON(w, 200, stats)
+	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
+	if err != nil {
+		log.Printf("Error fetch user stats: %v", err)
+		utils.WriteError(w, 500, "Err fetch user stats")
+		return
+	}
+	data, err := json.Marshal(stats)
+	log.Printf("marshal after fetch %v ", data)
+	if err != nil {
+		log.Printf("Error json stats: %v", err)
+		utils.WriteError(w, 500, "Failed to marsh data")
+		return
+	}
+	if err := st.rdb.Set(r.Context(), userId, data, 1*time.Minute).Err(); err != nil {
+		log.Printf("Err cache user stats: %v", err)
+	}
+	utils.WriteJSONRedis(w, 200, data)
 }
 
 func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Request) {
 	streamId := r.URL.Query().Get("stream_id")
+	redisdata, err := st.rdb.Get(r.Context(), streamId).Result()
+	if err == nil {
+		utils.WriteJSONRedis(w, 200, []byte(redisdata))
+		return
+	}
 
 	stats, err := st.store.Stats.GetStreamStatsById(r.Context(), streamId)
 	if err != nil {
 		log.Printf("Err encode user stats  %v", err)
 		return
 	}
+	data, err := json.Marshal(stats)
+	log.Printf("marshal after fetch %v ", data)
 
-	utils.WriteJSON(w, 200, stats)
-
+	if err != nil {
+		log.Printf("Error marshal stats: %v", err)
+		utils.WriteError(w, 500, "Failed to marsh data")
+		return
+	}
+	if err = st.rdb.Set(r.Context(), streamId, data, 1*time.Minute).Err(); err != nil {
+		log.Printf("Err cache user stats: %v", err)
+	}
+	utils.WriteJSONRedis(w, 200, data)
 }

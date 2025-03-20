@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -27,7 +28,7 @@ type StreamStats struct {
 	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
 }
 
-func NewRouter(db *pgxpool.Pool) *chi.Mux {
+func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
@@ -52,7 +53,7 @@ func NewRouter(db *pgxpool.Pool) *chi.Mux {
 		w.Write([]byte("Server is running"))
 	})
 
-	statsHandle := handlers.NewStatsHandler(db)
+	statsHandle := handlers.NewStatsHandler(pgdb,rdb)
 
 	r.Get("/user/stats", statsHandle.GetUserStatsById)
 	r.Get("/stream/stats", statsHandle.GetStreamStatsById)

@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: stream/stream_stats.proto
+// source: stream_stats/stream_stats.proto
 
-package stream
+package stream_stats
 
 import (
 	context "context"
@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StreamStatsService_GetUserStats_FullMethodName   = "/stream.StreamStatsService/GetUserStats"
-	StreamStatsService_GetStreamStats_FullMethodName = "/stream.StreamStatsService/GetStreamStats"
+	StreamStatsService_GetUserStats_FullMethodName   = "/stream_stats.StreamStatsService/GetUserStats"
+	StreamStatsService_GetStreamStats_FullMethodName = "/stream_stats.StreamStatsService/GetStreamStats"
 )
 
 // StreamStatsServiceClient is the client API for StreamStatsService service.
@@ -142,7 +142,7 @@ func _StreamStatsService_GetStreamStats_Handler(srv interface{}, ctx context.Con
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var StreamStatsService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "stream.StreamStatsService",
+	ServiceName: "stream_stats.StreamStatsService",
 	HandlerType: (*StreamStatsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -155,5 +155,5 @@ var StreamStatsService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "stream/stream_stats.proto",
+	Metadata: "stream_stats/stream_stats.proto",
 }

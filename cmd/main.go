@@ -8,22 +8,22 @@ import (
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/routers"
-
 )
 
 func main() {
 	context := context.Background()
 
 	twitchHandle := handlers.NewTwitchHandle()
-	db, err := db.DBConn(context)
+	pgdb, err := db.DBConn(context)
 	if err != nil {
 		log.Fatalf("Fatal conn to db: %v", err)
 	}
+	rdb := db.RedisDb()
 
-	go StartGRPCServer(db)
-	go NewTwitchSheduler(context, db).StartFetchLoop(twitchHandle)
+	go StartGRPCServer(pgdb)
+	go NewTwitchSheduler(context, pgdb).StartFetchLoop(twitchHandle)
 
-	r := routers.NewRouter(db)
+	r := routers.NewRouter(pgdb, rdb)
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,

@@ -1,11 +1,27 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 
+MGDIR = db/migration
 up:
-	goose -dir db/migration postgres ${DB_URL} up
+	goose -dir $(MGDIR) postgres ${DB_URL} up
 
 create_%:
-	goose -dir db/migration create $* sql
+	goose -dir $(MGDIR) create $* sql
+
+status:
+	goose -dir $(MGDIR) postgres ${DB_URL} status
+
+reset:
+	goose -dir $(MGDIR) postgres ${DB_URL} reset
+
+down:
+	goose -dir $(MGDIR) postgres ${DB_URL} down
+
+# new-migration:
+# ifndef NAME
+# 	$(error Usage: make new-migration NAME=your_migration_name)
+# endif
+# 	goose -dir $(MGDIR) create $(NAME) sql
 
 generate:
 	cd proto && protoc --go_out=. --go_opt=paths=source_relative \
