@@ -16,6 +16,7 @@ type StatsHandler struct {
 	pgdb  *pgxpool.Pool
 	store *store.Storage
 	rdb   *redis.Client
+	// group singleflight.Group
 }
 
 func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
@@ -25,18 +26,6 @@ func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
 		pgdb:  db,
 		rdb:   rdb,
 	}
-}
-
-type StreamStats struct {
-	ID             int       `json:"id" db:"id"`
-	StreamID       string    `json:"stream_id" db:"stream_id"`
-	UserID         string    `json:"user_id" db:"user_id"`
-	GameID         string    `json:"game_id" db:"game_id"`
-	Date           time.Time `json:"date" db:"date"`
-	Airtime        int       `json:"airtime" db:"airtime"`
-	PeakViewers    int       `json:"peak_viewers" db:"peak_viewers"`
-	AverageViewers int       `json:"average_viewers" db:"average_viewers"`
-	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
 }
 
 func (st *StatsHandler) Test(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +54,10 @@ func (st *StatsHandler) Test(w http.ResponseWriter, r *http.Request) {
 
 func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request) {
 	userId := r.URL.Query().Get("user_id")
+	if userId == "" {
+		utils.WriteError(w, 400, "user_id required")
+		return
+	}
 
 	cacheData, err := st.rdb.Get(r.Context(), userId).Result()
 	if err == nil {
@@ -74,45 +67,59 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 
 	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
 	if err != nil {
-		utils.WriteError(w, 500, "Err fetch user stats")
+		utils.WriteError(w, 400, err.Error())
 		return
 	}
-	data, err := json.Marshal(stats)
-	log.Printf("marshal after fetch %v ", data)
+
+	resp := StreamStatsResponseListFromDB(stats)
+	data, err := json.Marshal(resp)
 	if err != nil {
-		log.Printf("Error json stats: %v", err)
-		utils.WriteError(w, 500, "Failed to marsh data")
+		utils.WriteError(w, 400, "err marshal data")
 		return
 	}
-	if err := st.rdb.Set(r.Context(), userId, data, 30*time.Second).Err(); err != nil {
-		log.Printf("Err cache user stats: %v", err)
+
+	// go func() {
+	if err := st.rdb.Set(r.Context(), userId, data, 2*time.Minute).Err(); err != nil {
+		log.Printf("Err set user_id %v", err)
 	}
+	// }()
+
 	utils.WriteJSONRedis(w, 200, data)
 }
 
 func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Request) {
-	streamId := r.URL.Query().Get("stream_id")
-	redisdata, err := st.rdb.Get(r.Context(), streamId).Result()
+	stream_id := r.URL.Query().Get("stream_id")
+	if stream_id == "" {
+		utils.WriteError(w, 400, "user_id required")
+		return
+	}
+
+	cacheData, err := st.rdb.Get(r.Context(), stream_id).Result()
 	if err == nil {
-		utils.WriteJSONRedis(w, 200, []byte(redisdata))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(cacheData))
 		return
 	}
 
-	stats, err := st.store.Stats.GetStreamStatsById(r.Context(), streamId)
+	// data, err, _ := st.group.Do(stream_id, func() (interface{}, error) {
+	stats, err := st.store.Stats.GetStreamStatsById(r.Context(), stream_id)
 	if err != nil {
-		log.Printf("Err encode user stats  %v", err)
+		utils.WriteError(w, 400, "err get stream from db")
 		return
 	}
-	data, err := json.Marshal(stats)
-	log.Printf("marshal after fetch %v ", data)
 
+	resp := StreamStatsResponseListFromDB(stats)
+	data, err := json.Marshal(resp)
 	if err != nil {
-		log.Printf("Error marshal stats: %v", err)
-		utils.WriteError(w, 500, "Failed to marsh data")
+		utils.WriteError(w, 400, "err marshal data")
 		return
 	}
-	if err = st.rdb.Set(r.Context(), streamId, data, 30*time.Second).Err(); err != nil {
-		log.Printf("Err cache user stats: %v", err)
+
+	// go func() {
+	if err := st.rdb.Set(r.Context(), stream_id, data, 2*time.Minute).Err(); err != nil {
+		log.Printf("Err set user_id %v", err)
 	}
+	// }()
+
 	utils.WriteJSONRedis(w, 200, data)
 }

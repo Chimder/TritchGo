@@ -20,7 +20,7 @@ const (
 )
 
 func DBConn(ctx context.Context) (*pgxpool.Pool, error) {
-	url := config.LoadEnv().DB_URL
+	url := config.LoadEnv().DBUrl
 
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {

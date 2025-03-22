@@ -24,10 +24,10 @@ var (
 )
 
 func NewTwitchHandle() *TwitchHandle {
-	env := config.LoadEnv()
+	// env := config.LoadEnv()
 	return &TwitchHandle{
-		client_id:     env.CLIENT_ID,
-		client_secret: env.CLIENT_SECRET,
+		client_id:     config.LoadEnv().ClientID,
+		client_secret: config.LoadEnv().ClientSecret,
 	}
 }
 

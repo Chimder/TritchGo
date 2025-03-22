@@ -1,7 +1,7 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 
-MGDIR = db/migration
+MGDIR = sql/migration
 up:
 	goose -dir $(MGDIR) postgres ${DB_URL} up
 
@@ -58,3 +58,9 @@ vegeta-res:
 
 wrk:
 	wrk -t2 -c100 -d30s http://localhost:8080/go-json-gzip
+#
+
+stop:
+	docker compose stop
+dcup:
+	docker compose up -d

@@ -2,45 +2,31 @@ package config
 
 import (
 	"log"
-	"os"
 
+	"github.com/caarlos0/env/v10"
 	"github.com/joho/godotenv"
 )
 
 type EnvVars struct {
-	CLIENT_ID     string
-	CLIENT_SECRET string
-	DB_URL        string
+	ClientID     string `env:"CLIENT_ID"`
+	ClientSecret string `env:"CLIENT_SECRET"`
+	DBUrl        string `env:"DB_URL"`
 }
 
 func LoadEnv() EnvVars {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Error loading .env file")
+	_ = godotenv.Load()
+	cfg := EnvVars{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatal(err)
 	}
-
-	client_id := os.Getenv("CLIENT_ID")
-	client_secret := os.Getenv("CLIENT_SECRET")
-	db_url := os.Getenv("DB_URL")
-
-	// isProdStr := os.Getenv("IS_PROD")
-	// isProd, err := strconv.ParseBool(isProdStr)
-	// if err != nil {
-	// 	isProd = false
-	// }
-
-	return EnvVars{
-		CLIENT_ID:     client_id,
-		CLIENT_SECRET: client_secret,
-		DB_URL:        db_url,
-	}
+	return cfg
 }
-
-// package config
 
 // import (
 // 	"log"
 // 	"os"
+
+// 	"github.com/joho/godotenv"
 // )
 
 // type EnvVars struct {
@@ -50,27 +36,24 @@ func LoadEnv() EnvVars {
 // }
 
 // func LoadEnv() EnvVars {
-// 	clientID := os.Getenv("CLIENT_ID")
-// 	if clientID == "" {
-// 		log.Print("CLIENT_ID is not set")
+// 	err := godotenv.Load()
+// 	if err != nil {
+// 		log.Println("Error loading .env file")
 // 	}
 
-// 	clientSecret := os.Getenv("CLIENT_SECRET")
-// 	if clientSecret == "" {
-// 		log.Print("CLIENT_SECRET is not set")
-// 	}
+// 	client_id := os.Getenv("CLIENT_ID")
+// 	client_secret := os.Getenv("CLIENT_SECRET")
+// 	db_url := os.Getenv("DB_URL")
 
-// 	dbURL := os.Getenv("DB_URL")
-// 	if dbURL == "" {
-// 		log.Print("DB_URL is not set")
-// 	}
-// 	log.Printf("db", dbURL)
-// 	log.Printf("id", clientID)
-// 	log.Printf("cliek", clientSecret)
+// 	// isProdStr := os.Getenv("IS_PROD")
+// 	// isProd, err := strconv.ParseBool(isProdStr)
+// 	// if err != nil {
+// 	// 	isProd = false
+// 	// }
 
 // 	return EnvVars{
-// 		CLIENT_ID:     clientID,
-// 		CLIENT_SECRET: clientSecret,
-// 		DB_URL:        dbURL,
+// 		CLIENT_ID:     client_id,
+// 		CLIENT_SECRET: client_secret,
+// 		DB_URL:        db_url,
 // 	}
 // }

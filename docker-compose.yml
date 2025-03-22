@@ -1,15 +1,53 @@
-# services:
-#   postgres:
-#     image: postgres:16
-#     container_name: postgresV2
-#     ports:
-#       - "5433:5432"
-#     environment:
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: postgres
-#       POSTGRES_DB: postgres
-#     volumes:
-#       - postgres_data:/var/lib/postgresql/data
+# version: '3.8'
+
+services:
+  postgres:
+    image: postgres
+    container_name: GoStats
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: pgweb
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      PGWEB_DATABASE_URL: "postgres://postgres:postgres@GoStats:5432/postgres?sslmode=disable"
+    ports:
+      - "8081:8081"
+
+  # gotritch:
+  #   image: gomintv1
+  #   container_name: gotritch
+  #   restart: always
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   environment:
+  #     DB_URL: "postgresql://postgres:postgres@GoStats:5432/postgres?sslmode=disable"
+  #   ports:
+  #     - "8080:8080"
+  #   env_file:
+  #     - .env
+
+volumes:
+  pgdata:
 
 # volumes:
 #   postgres_data:
@@ -49,35 +87,35 @@
 #     driver: bridge
 
 
-services:
-  postgres:
-    image: postgres:latest
-    container_name: postgresV2
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    networks:
-      - tritch-network
+# services:
+#   postgres:
+#     image: postgres:latest
+#     container_name: postgresV2
+#     ports:
+#       - "5432:5432"
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: postgres
+#     networks:
+#       - tritch-network
 
 
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    # env_file:
-    #   - .env
-    environment:
-      DB_URL: postgresql://postgres:postgres@postgresV2:5432/postgres?sslmode=disable
-      CLIENT_ID: ${CLIENT_ID}
-      CLIENT_SECRET: ${CLIENT_SECRET}
-    depends_on:
-      - postgres
-    networks:
-      - tritch-network
+#   app:
+#     build: .
+#     ports:
+#       - "8080:8080"
+#     # env_file:
+#     #   - .env
+#     environment:
+#       DB_URL: postgresql://postgres:postgres@postgresV2:5432/postgres?sslmode=disable
+#       CLIENT_ID: ${CLIENT_ID}
+#       CLIENT_SECRET: ${CLIENT_SECRET}
+#     depends_on:
+#       - postgres
+#     networks:
+#       - tritch-network
 
-networks:
-  tritch-network:
-    driver: bridge
+# networks:
+#   tritch-network:
+#     driver: bridge

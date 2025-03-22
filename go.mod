@@ -3,6 +3,7 @@ module tritchgo
 go 1.23.6
 
 require (
+	github.com/caarlos0/env/v10 v10.0.0
 	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/cors v1.2.1
 	github.com/go-resty/resty/v2 v2.16.5

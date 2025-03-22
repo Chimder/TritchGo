@@ -13,6 +13,7 @@ import (
 func main() {
 	context := context.Background()
 
+
 	twitchHandle := handlers.NewTwitchHandle()
 	pgdb, err := db.DBConn(context)
 	if err != nil {
@@ -29,6 +30,7 @@ func main() {
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
 	}
 
 	log.Println("Server started on :8080")
