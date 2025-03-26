@@ -1,4 +1,4 @@
-package store
+package repository
 
 import (
 	"context"
@@ -8,15 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type StatsStore struct {
+type StatsRepo struct {
 	db *pgxpool.Pool
 }
 
-func NewStatsStore(db *pgxpool.Pool) *StatsStore {
-	return &StatsStore{db: db}
+func NewStatsRepo(db *pgxpool.Pool) *StatsRepo {
+	return &StatsRepo{db: db}
 }
 
-func (st *StatsStore) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
+func (st *StatsRepo) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE user_id = $1`
 	rows, err := st.db.Query(ctx, query, id)
 	if err != nil {
@@ -33,7 +33,7 @@ func (st *StatsStore) GetUserStatsById(ctx context.Context, id string) ([]Stream
 	return stats, err
 }
 
-func (st *StatsStore) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
+func (st *StatsRepo) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE stream_id = $1`
 
 	rows, err := st.db.Query(ctx, query, id)

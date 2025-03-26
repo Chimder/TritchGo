@@ -10,15 +10,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	defaultMaxConns          = 5
-	defaultMinConns          = 1
-	defaultMaxConnLifetime   = 30 * time.Minute
-	defaultMaxConnIdleTime   = 15 * time.Minute
-	defaultHealthCheckPeriod = 2 * time.Minute
-	defaultConnectTimeout    = 5 * time.Second
-)
-
 func DBConn(ctx context.Context) (*pgxpool.Pool, error) {
 	url := config.LoadEnv().DBUrl
 
@@ -27,12 +18,12 @@ func DBConn(ctx context.Context) (*pgxpool.Pool, error) {
 		log.Fatalf("Failed to parse config DBPOOL: %v", err)
 	}
 
-	config.MaxConns = defaultMaxConns
-	config.MinConns = defaultMinConns
-	config.MaxConnLifetime = defaultMaxConnLifetime
-	config.MaxConnIdleTime = defaultMaxConnIdleTime
-	config.HealthCheckPeriod = defaultHealthCheckPeriod
-	config.ConnConfig.ConnectTimeout = defaultConnectTimeout
+	config.MaxConns = 5
+	config.MinConns = 1
+	config.MaxConnLifetime = 30 * time.Minute
+	config.MaxConnIdleTime = 15 * time.Minute
+	config.HealthCheckPeriod = 2 * time.Minute
+	config.ConnConfig.ConnectTimeout = 5 * time.Second
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

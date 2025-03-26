@@ -13,13 +13,13 @@ type EnvVars struct {
 	DBUrl        string `env:"DB_URL"`
 }
 
-func LoadEnv() EnvVars {
+func LoadEnv() *EnvVars {
 	_ = godotenv.Load()
 	cfg := EnvVars{}
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatal(err)
 	}
-	return cfg
+	return &cfg
 }
 
 // import (

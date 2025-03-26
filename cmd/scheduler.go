@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"math"
 	"sync"
 	"time"
@@ -33,7 +34,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 15 * time.Minute
+		interval := 2 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -119,7 +120,8 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 	}
 
 	insertWg.Wait()
-	log.Printf("time taken: %v", time.Since(startTime))
+	slog.Info("timeTaken", "time", time.Since(startTime))
+	// log.Printf("time taken: %v", time.Since(startTime))
 	return nil
 }
 

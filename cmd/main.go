@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
@@ -12,7 +14,13 @@ import (
 
 func main() {
 	context := context.Background()
+	opts := &slog.HandlerOptions{
+		// AddSource: true,
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
 
+	slog.SetDefault(logger)
 
 	twitchHandle := handlers.NewTwitchHandle()
 	pgdb, err := db.DBConn(context)
@@ -33,7 +41,7 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	log.Println("Server started on :8080")
+	slog.Info("Server started on :8080")
 	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("Server error: %v", err)

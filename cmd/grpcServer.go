@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
-	"tritchgo/internal/store"
+	"tritchgo/internal/repository"
 
 	"tritchgo/proto/stream_stats"
 
@@ -15,17 +15,17 @@ import (
 
 type StatsServer struct {
 	stream_stats.UnimplementedStreamStatsServiceServer
-	db    *pgxpool.Pool
-	store *store.Storage
+	db   *pgxpool.Pool
+	repo *repository.Repository
 }
 
 func NewStatsServer(ctx context.Context, db *pgxpool.Pool) *StatsServer {
-	statsStore := store.NewStorage(db)
-	return &StatsServer{db: db, store: &statsStore}
+	statsRepository := repository.NewRepository(db)
+	return &StatsServer{db: db, repo: statsRepository}
 }
 
 func (s *StatsServer) GetUserStats(ctx context.Context, req *stream_stats.UserStatsRequest) (*stream_stats.UserStatsResponse, error) {
-	stats, err := s.store.Stats.GetUserStatsById(ctx, req.UserId)
+	stats, err := s.repo.Stats.GetUserStatsById(ctx, req.UserId)
 	if err != nil {
 		log.Printf("Err fetch user stats  %v", err)
 		return nil, err
@@ -50,7 +50,7 @@ func (s *StatsServer) GetUserStats(ctx context.Context, req *stream_stats.UserSt
 }
 
 func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream_stats.StreamStatsRequest) (*stream_stats.StreamStatsResponse, error) {
-	stats, err := s.store.Stats.GetStreamStatsById(ctx, req.StreamId)
+	stats, err := s.repo.Stats.GetStreamStatsById(ctx, req.StreamId)
 	if err != nil {
 		return nil, err
 	}

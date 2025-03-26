@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"time"
-	"tritchgo/internal/store"
+	"tritchgo/internal/repository"
 
 	"github.com/google/uuid"
 )
@@ -19,7 +19,7 @@ type StreamStatsResp struct {
 	HoursWatched   int       `json:"hours_watched"`
 }
 
-func StreamStatsRespFromDB(s store.StreamStats) StreamStatsResp {
+func StreamStatsRespFromDB(s repository.StreamStats) StreamStatsResp {
 	return StreamStatsResp{
 		ID:             s.ID,
 		StreamID:       s.StreamID,
@@ -33,7 +33,7 @@ func StreamStatsRespFromDB(s store.StreamStats) StreamStatsResp {
 	}
 }
 
-func StreamStatsResponseListFromDB(stats []store.StreamStats) []StreamStatsResp {
+func StreamStatsResponseListFromDB(stats []repository.StreamStats) []StreamStatsResp {
 	responses := make([]StreamStatsResp, len(stats))
 	for i, s := range stats {
 		responses[i] = StreamStatsRespFromDB(s)

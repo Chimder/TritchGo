@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"tritchgo/internal/store"
+	"tritchgo/internal/repository"
 	"tritchgo/utils"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -13,18 +13,18 @@ import (
 )
 
 type StatsHandler struct {
-	pgdb  *pgxpool.Pool
-	store *store.Storage
-	rdb   *redis.Client
+	pgdb *pgxpool.Pool
+	repo *repository.Repository
+	rdb  *redis.Client
 	// group singleflight.Group
 }
 
 func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
-	store := store.NewStorage(db)
+	repo := repository.NewRepository(db)
 	return &StatsHandler{
-		store: &store,
-		pgdb:  db,
-		rdb:   rdb,
+		repo: repo,
+		pgdb: db,
+		rdb:  rdb,
 	}
 }
 
@@ -65,7 +65,7 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	stats, err := st.store.Stats.GetUserStatsById(r.Context(), userId)
+	stats, err := st.repo.Stats.GetUserStatsById(r.Context(), userId)
 	if err != nil {
 		utils.WriteError(w, 400, err.Error())
 		return
@@ -102,7 +102,7 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 	}
 
 	// data, err, _ := st.group.Do(stream_id, func() (interface{}, error) {
-	stats, err := st.store.Stats.GetStreamStatsById(r.Context(), stream_id)
+	stats, err := st.repo.Stats.GetStreamStatsById(r.Context(), stream_id)
 	if err != nil {
 		utils.WriteError(w, 400, "err get stream from db")
 		return
