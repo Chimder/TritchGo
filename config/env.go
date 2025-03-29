@@ -11,6 +11,7 @@ type EnvVars struct {
 	ClientID     string `env:"CLIENT_ID"`
 	ClientSecret string `env:"CLIENT_SECRET"`
 	DBUrl        string `env:"DB_URL"`
+	Debug        bool `env:"DEBUG"`
 }
 
 func LoadEnv() *EnvVars {

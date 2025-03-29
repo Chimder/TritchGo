@@ -7,20 +7,26 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"tritchgo/config"
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/routers"
 )
 
+func LoggerInit() {
+	debug := config.LoadEnv().Debug
+	var logger *slog.Logger
+	if debug {
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	} else {
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
+	}
+	slog.SetDefault(logger)
+
+}
 func main() {
 	context := context.Background()
-	opts := &slog.HandlerOptions{
-		// AddSource: true,
-		Level: slog.LevelDebug,
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
-
-	slog.SetDefault(logger)
+	LoggerInit()
 
 	twitchHandle := handlers.NewTwitchHandle()
 	pgdb, err := db.DBConn(context)

@@ -2,53 +2,56 @@ package repository
 
 import (
 	"context"
-	"log"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type StatsRepo struct {
+type StatsRepo interface {
+	GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error)
+	GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error)
+}
+
+type statsRepo struct {
 	db *pgxpool.Pool
 }
 
-func NewStatsRepo(db *pgxpool.Pool) *StatsRepo {
-	return &StatsRepo{db: db}
+func NewStatsRepo(db *pgxpool.Pool) StatsRepo {
+	return &statsRepo{db: db}
 }
 
-func (st *StatsRepo) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
+func (r *statsRepo) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 	query := `SELECT * FROM stream_stats WHERE user_id = $1`
-	rows, err := st.db.Query(ctx, query, id)
+	rows, err := r.db.Query(ctx, query, id)
 	if err != nil {
-		log.Printf("Err fetch user stats  %v", err)
-		return nil, err
+		return nil, fmt.Errorf("err fetch user stats  %w", err)
 	}
 	defer rows.Close()
 
 	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
 
 	if err := rows.Err(); err != nil {
-		log.Printf("Error iterating rows: %v", err)
+		return nil, fmt.Errorf("err iterating rows %w", err)
 	}
+
 	return stats, err
 }
 
-func (st *StatsRepo) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
-	query := `SELECT * FROM stream_stats WHERE stream_id = $1`
+func (r *statsRepo) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
 
-	rows, err := st.db.Query(ctx, query, id)
+	rows, err := r.db.Query(ctx, `SELECT * FROM stream_stats WHERE stream_id = $1`, id)
 	if err != nil {
-		log.Printf("Err fetch stream stats  %v", err)
-		return nil, err
+		return nil, fmt.Errorf("err fetch stream stats %w", err)
 	}
 
 	s, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("no stream rows found: %w", err)
 		}
-		log.Printf("Error scanning row: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("err scanning row %w", err)
 	}
 	return s, nil
 }
