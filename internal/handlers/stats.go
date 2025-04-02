@@ -78,11 +78,9 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// go func() {
 	if err := st.rdb.Set(r.Context(), userId, data, 2*time.Minute).Err(); err != nil {
 		log.Printf("Err set user_id %v", err)
 	}
-	// }()
 
 	utils.WriteJSONRedis(w, 200, data)
 }
@@ -101,7 +99,6 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// data, err, _ := st.group.Do(stream_id, func() (interface{}, error) {
 	stats, err := st.repo.Stats.GetStreamStatsById(r.Context(), stream_id)
 	if err != nil {
 		utils.WriteError(w, 400, "err get stream from db")
@@ -115,11 +112,9 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// go func() {
 	if err := st.rdb.Set(r.Context(), stream_id, data, 2*time.Minute).Err(); err != nil {
 		log.Printf("Err set user_id %v", err)
 	}
-	// }()
 
 	utils.WriteJSONRedis(w, 200, data)
 }

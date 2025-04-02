@@ -40,7 +40,6 @@ func (r *statsRepo) GetUserStatsById(ctx context.Context, id string) ([]StreamSt
 }
 
 func (r *statsRepo) GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error) {
-
 	rows, err := r.db.Query(ctx, `SELECT * FROM stream_stats WHERE stream_id = $1`, id)
 	if err != nil {
 		return nil, fmt.Errorf("err fetch stream stats %w", err)

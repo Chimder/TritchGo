@@ -5,25 +5,12 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
-	"tritchgo/config"
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/routers"
 )
 
-func LoggerInit() {
-	debug := config.LoadEnv().Debug
-	var logger *slog.Logger
-	if debug {
-		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	} else {
-		logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
-	}
-	slog.SetDefault(logger)
-
-}
 func main() {
 	context := context.Background()
 	LoggerInit()

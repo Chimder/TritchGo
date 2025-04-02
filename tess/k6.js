@@ -24,8 +24,8 @@ export const options = {
 
 export default function () {
   const urls = [
-    "http://localhost:8080/stream/stats?stream_id=317402421241",
-    "http://localhost:8080/user/stats?user_id=28354765",
+    "http://localhost:8080/stream/stats?stream_id=318071585529",
+    "http://localhost:8080/user/stats?user_id=23161357",
   ];
 
   urls.forEach((url) => {
