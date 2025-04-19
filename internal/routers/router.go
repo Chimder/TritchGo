@@ -2,7 +2,6 @@ package routers
 
 import (
 	"net/http"
-	"time"
 	"tritchgo/internal/handlers"
 
 	"github.com/go-chi/chi"
@@ -15,18 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
-
-type StreamStats struct {
-	ID             int       `json:"id" db:"id"`
-	StreamID       string    `json:"stream_id" db:"stream_id"`
-	UserID         string    `json:"user_id" db:"user_id"`
-	GameID         string    `json:"game_id" db:"game_id"`
-	Date           time.Time `json:"date" db:"date"`
-	Airtime        int       `json:"airtime" db:"airtime"`
-	PeakViewers    int       `json:"peak_viewers" db:"peak_viewers"`
-	AverageViewers int       `json:"average_viewers" db:"average_viewers"`
-	HoursWatched   int       `json:"hours_watched" db:"hours_watched"`
-}
 
 func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 	r := chi.NewRouter()
@@ -53,7 +40,7 @@ func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 		w.Write([]byte("Server is running"))
 	})
 
-	statsHandle := handlers.NewStatsHandler(pgdb,rdb)
+	statsHandle := handlers.NewStatsHandler(pgdb, rdb)
 
 	r.Get("/user/stats", statsHandle.GetUserStatsById)
 	r.Get("/stream/stats", statsHandle.GetStreamStatsById)
