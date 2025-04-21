@@ -9,13 +9,14 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
+func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafka.Writer) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
@@ -40,7 +41,7 @@ func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 		w.Write([]byte("Server is running"))
 	})
 
-	statsHandle := handlers.NewStatsHandler(pgdb, rdb)
+	statsHandle := handlers.NewStatsHandler(pgdb, rdb, kafkaWriter)
 
 	r.Get("/user/stats", statsHandle.GetUserStatsById)
 	r.Get("/stream/stats", statsHandle.GetStreamStatsById)

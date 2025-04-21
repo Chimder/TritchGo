@@ -10,21 +10,23 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/segmentio/kafka-go"
 )
 
 type StatsHandler struct {
-	pgdb *pgxpool.Pool
-	repo *repository.Repository
-	rdb  *redis.Client
-	// group singleflight.Group
+	pgdb        *pgxpool.Pool
+	repo        *repository.Repository
+	rdb         *redis.Client
+	kafkaWriter *kafka.Writer
 }
 
-func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
+func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafka.Writer) *StatsHandler {
 	repo := repository.NewRepository(db)
 	return &StatsHandler{
-		repo: repo,
-		pgdb: db,
-		rdb:  rdb,
+		repo:        repo,
+		pgdb:        db,
+		rdb:         rdb,
+		kafkaWriter: kafkaWriter,
 	}
 }
 
@@ -77,6 +79,13 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		utils.WriteError(w, 400, "err marshal data")
 		return
 	}
+
+	start := time.Now()
+	err = st.kafkaWriter.WriteMessages(r.Context(), kafka.Message{Key: []byte(userId), Value: data})
+	if err != nil {
+		log.Printf("Kafka Err %v", err)
+	}
+	log.Printf("Kafka write took %v", time.Since(start))
 
 	if err := st.rdb.Set(r.Context(), userId, data, 2*time.Minute).Err(); err != nil {
 		log.Printf("Err set user_id %v", err)
