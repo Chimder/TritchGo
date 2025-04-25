@@ -3,20 +3,20 @@ package routers
 import (
 	"net/http"
 	"tritchgo/internal/handlers"
+	kafkaWriter "tritchgo/internal/kafka"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/segmentio/kafka-go"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafka.Writer) *chi.Mux {
+func NewRouter(pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaWriter.KafkaWriters) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{

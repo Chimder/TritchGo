@@ -6,29 +6,39 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type ProdKafka struct {
-	writer *kafka.Writer
+type KafkaWriters struct {
+	UserStatsWriter   *kafka.Writer
+	StreamStatsWriter *kafka.Writer
 }
 
-func NewProdKafka() *ProdKafka {
-	return &ProdKafka{
-		writer: kafka.NewWriter(kafka.WriterConfig{
+func NewKafkaWriters() *KafkaWriters {
+	return &KafkaWriters{
+		UserStatsWriter: kafka.NewWriter(kafka.WriterConfig{
 			Brokers:      []string{"localhost:9092"},
-			Topic:        "tritch-stats",
+			Topic:        "user-stats",
 			Balancer:     &kafka.LeastBytes{},
 			Async:        true,
 			BatchTimeout: 10 * time.Millisecond,
 			WriteTimeout: 50 * time.Millisecond,
 			RequiredAcks: int(kafka.RequireOne),
-			ReadTimeout: 30 * time.Second,
+		}),
+		StreamStatsWriter: kafka.NewWriter(kafka.WriterConfig{
+			Brokers:      []string{"localhost:9092"},
+			Topic:        "stream-stats",
+			Balancer:     &kafka.LeastBytes{},
+			Async:        true,
+			BatchTimeout: 10 * time.Millisecond,
+			WriteTimeout: 50 * time.Millisecond,
+			RequiredAcks: int(kafka.RequireOne),
 		}),
 	}
 }
 
-func (k *ProdKafka) GetWriter() *kafka.Writer {
-	return k.writer
+func (w *KafkaWriters) Close() {
+	w.UserStatsWriter.Close()
+	w.StreamStatsWriter.Close()
 }
 
-func (k *ProdKafka) Close() {
-	k.writer.Close()
-}
+// func (k *KafkaWriters) GetWriter() *kafka.Writer {
+// 	return k.StreamStatsWriter
+// }

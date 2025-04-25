@@ -31,13 +31,13 @@ func main() {
 	rdb := db.RedisDb()
 	defer rdb.Close()
 
-	kafkaProducer := kafka.NewProdKafka()
+	kafkaProducer := kafka.NewKafkaWriters()
 	defer kafkaProducer.Close()
 
 	go StartGRPCServer(pgdb)
 	go NewTwitchSheduler(ctx, pgdb).StartFetchLoop(twitchHandle)
 
-	r := routers.NewRouter(pgdb, rdb, kafkaProducer.GetWriter())
+	r := routers.NewRouter(pgdb, rdb, kafkaProducer)
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,

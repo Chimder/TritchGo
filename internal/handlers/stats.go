@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	kafkaW "tritchgo/internal/kafka"
 	"tritchgo/internal/repository"
 	"tritchgo/utils"
 
@@ -17,10 +18,10 @@ type StatsHandler struct {
 	pgdb        *pgxpool.Pool
 	repo        *repository.Repository
 	rdb         *redis.Client
-	kafkaWriter *kafka.Writer
+	kafkaWriter *kafkaW.KafkaWriters
 }
 
-func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafka.Writer) *StatsHandler {
+func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaW.KafkaWriters) *StatsHandler {
 	repo := repository.NewRepository(db)
 	return &StatsHandler{
 		repo:        repo,
@@ -80,12 +81,10 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	start := time.Now()
-	err = st.kafkaWriter.WriteMessages(r.Context(), kafka.Message{Key: []byte(userId), Value: data})
+	err = st.kafkaWriter.UserStatsWriter.WriteMessages(r.Context(), kafka.Message{Key: []byte(userId), Value: data})
 	if err != nil {
 		log.Printf("Kafka Err %v", err)
 	}
-	log.Printf("Kafka write took %v", time.Since(start))
 
 	if err := st.rdb.Set(r.Context(), userId, data, 2*time.Minute).Err(); err != nil {
 		log.Printf("Err set user_id %v", err)
@@ -119,6 +118,11 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		utils.WriteError(w, 400, "err marshal data")
 		return
+	}
+
+	err = st.kafkaWriter.StreamStatsWriter.WriteMessages(r.Context(), kafka.Message{Key: []byte(stream_id), Value: data})
+	if err != nil {
+		log.Printf("Kafka Err %v", err)
 	}
 
 	if err := st.rdb.Set(r.Context(), stream_id, data, 2*time.Minute).Err(); err != nil {
