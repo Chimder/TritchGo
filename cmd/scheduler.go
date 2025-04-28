@@ -9,6 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"math"
+	"strings"
 	"sync"
 	"time"
 	"tritchgo/internal/handlers"
@@ -38,7 +39,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 1 * time.Minute
+		interval := 15 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -93,6 +94,10 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	var batchMutex sync.Mutex
 	streamBatchInsert := &pgx.Batch{}
 
+	var elasticBuf bytes.Buffer
+	var elasticMutex sync.Mutex
+	// var elasticBulkData []map[string]interface{}
+
 	for streams := range gameChan {
 		for _, stream := range streams {
 			insertWg.Add(1)
@@ -109,16 +114,26 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 				ts.insertStreamStats(&stream, streamBatchInsert, startedAt)
 				batchMutex.Unlock()
 
-				err = ts.indexStreamToElastic(&stream)
-				if err != nil {
-					log.Printf("Failed to index to Elastic: %v", err)
-				}
+				elasticMutex.Lock()
+				ts.indexStreamToElastic(&stream, &elasticBuf)
+				elasticMutex.Unlock()
+
 			}(stream)
 		}
 	}
 
-	insertWg.Wait()
+	elasticRes, err := ts.es.Bulk(
+		strings.NewReader(elasticBuf.String()),
+		ts.es.Bulk.WithContext(context.Background()),
+	)
+	if err != nil {
+		log.Fatalf("Error sending bulk request: %s", err)
+	}
+	defer elasticRes.Body.Close()
 
+	log.Printf("Bulk response: %s", elasticRes.Status())
+
+	insertWg.Wait()
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
 
@@ -134,6 +149,26 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	}
 
 	slog.Info("timeTaken", "time", time.Since(startTime))
+	return nil
+}
+func (ts *TwitchScheduler) indexStreamToElastic(stream *handlers.Stream, buf *bytes.Buffer) error {
+	meta := map[string]interface{}{
+		"index": map[string]interface{}{
+			"_index": "stream_stats",
+			"_id":    stream.ID,
+		},
+	}
+	doc := map[string]interface{}{
+		"user_id": stream.UserID,
+		"title":   stream.Title,
+	}
+	if err := json.NewEncoder(buf).Encode(meta); err != nil {
+		log.Printf("Error encoding meta: %s", err)
+	}
+
+	if err := json.NewEncoder(buf).Encode(doc); err != nil {
+		log.Printf("Error encoding document: %s", err)
+	}
 	return nil
 }
 
@@ -165,35 +200,4 @@ DO UPDATE SET
 	}
 
 	streamBatchInsert.Queue(stringQuery, args)
-}
-
-func (ts *TwitchScheduler) indexStreamToElastic(stream *handlers.Stream) error {
-	doc := map[string]interface{}{
-		"user_id": stream.UserID,
-		"title":   stream.Title,
-	}
-
-	docBytes, err := json.Marshal(doc)
-	if err != nil {
-		return fmt.Errorf("failed to marshal document: %w", err)
-	}
-
-	req := bytes.NewReader(docBytes)
-
-	res, err := ts.es.Index(
-		"stream_stats",
-		req,
-		ts.es.Index.WithDocumentID(stream.ID),
-		ts.es.Index.WithRefresh("true"),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to index document: %w", err)
-	}
-	defer res.Body.Close()
-
-	if res.IsError() {
-		return fmt.Errorf("elasticsearch indexing error: %s", res.String())
-	}
-
-	return nil
 }
