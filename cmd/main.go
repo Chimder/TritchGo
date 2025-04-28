@@ -12,6 +12,7 @@ import (
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/kafka"
+	"tritchgo/internal/repository"
 	"tritchgo/internal/routers"
 )
 
@@ -28,6 +29,18 @@ func main() {
 	}
 	defer pgdb.Close()
 
+	repo := repository.NewRepository(pgdb)
+
+	els := db.NewElasticDB()
+	err = els.Mapping()
+	if err != nil {
+		log.Fatalf("Fatal conn to elasticsearch: %v", err)
+	}
+	// err = els.FromPostToElastic(*repo)
+	// if err != nil {
+	// 	log.Fatalf("Fatal add postgres to elasticsearch: %v", err)
+	// }
+
 	rdb := db.RedisDb()
 	defer rdb.Close()
 
@@ -35,9 +48,9 @@ func main() {
 	defer kafkaProducer.Close()
 
 	go StartGRPCServer(pgdb)
-	go NewTwitchSheduler(ctx, pgdb).StartFetchLoop(twitchHandle)
+	go NewTwitchScheduler(ctx, pgdb, els.GetClient()).StartFetchLoop(twitchHandle)
 
-	r := routers.NewRouter(pgdb, rdb, kafkaProducer)
+	r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,

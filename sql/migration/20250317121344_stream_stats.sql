@@ -8,6 +8,7 @@ CREATE TABLE stream_stats (
     user_id varchar(255) NOT NULL,
     game_id varchar(255) NOT NULL,
     date date NOT NULL,
+    title text NOT NULL,
     airtime int DEFAULT 0,
     peak_viewers int DEFAULT 0,
     average_viewers int DEFAULT 0,

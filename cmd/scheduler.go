@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -11,18 +13,20 @@ import (
 	"time"
 	"tritchgo/internal/handlers"
 
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type TwitchSheduler struct {
+type TwitchScheduler struct {
 	ctx context.Context
 	db  *pgxpool.Pool
+	es  *elasticsearch.Client
 }
 
-func NewTwitchSheduler(ctx context.Context, db *pgxpool.Pool) *TwitchSheduler {
-	return &TwitchSheduler{ctx: ctx, db: db}
+func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client) *TwitchScheduler {
+	return &TwitchScheduler{ctx: ctx, db: db, es: es}
 }
 
 func nextInterval(duration time.Duration) time.Time {
@@ -32,9 +36,9 @@ func nextInterval(duration time.Duration) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinutes, 0, 0, now.Location())
 }
 
-func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
+func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 15 * time.Minute
+		interval := 1 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -49,7 +53,7 @@ func (ts *TwitchSheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	}
 }
 
-func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHandle) error {
+func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHandle) error {
 	_, err := twitchHandle.GetValidToken()
 	if err != nil {
 		return err
@@ -88,6 +92,7 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 	var insertWg sync.WaitGroup
 	var batchMutex sync.Mutex
 	streamBatchInsert := &pgx.Batch{}
+
 	for streams := range gameChan {
 		for _, stream := range streams {
 			insertWg.Add(1)
@@ -97,13 +102,22 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 				startedAt, err := time.Parse(time.RFC3339, stream.StartedAt)
 				if err != nil {
 					log.Println("Error parsing started_at:", err)
+					return
 				}
+
 				batchMutex.Lock()
 				ts.insertStreamStats(&stream, streamBatchInsert, startedAt)
 				batchMutex.Unlock()
+
+				err = ts.indexStreamToElastic(&stream)
+				if err != nil {
+					log.Printf("Failed to index to Elastic: %v", err)
+				}
 			}(stream)
 		}
 	}
+
+	insertWg.Wait()
 
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
@@ -119,21 +133,19 @@ func (ts *TwitchSheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHan
 		}
 	}
 
-	insertWg.Wait()
 	slog.Info("timeTaken", "time", time.Since(startTime))
-	// log.Printf("time taken: %v", time.Since(startTime))
 	return nil
 }
 
-func (ts *TwitchSheduler) insertStreamStats(stream *handlers.Stream, streamBatchInsert *pgx.Batch, startedAt time.Time) {
+func (ts *TwitchScheduler) insertStreamStats(stream *handlers.Stream, streamBatchInsert *pgx.Batch, startedAt time.Time) {
 	now := time.Now().UTC()
 	airtimeDuration := now.Sub(startedAt)
 	airtimeMinutes := int(math.Round(airtimeDuration.Minutes()))
 
 	stringQuery := `INSERT INTO stream_stats (
-    stream_id, user_id, game_id, date, airtime, peak_viewers, average_viewers, hours_watched
+    stream_id, user_id, game_id, date, title, airtime, peak_viewers, average_viewers, hours_watched
 ) VALUES (
-  @stream_id, @user_id, @game_id, @date, @airtime, @peak_viewers, @average_viewers, @hours_watched
+  @stream_id, @user_id, @game_id, @date, @title, @airtime, @peak_viewers, @average_viewers, @hours_watched
 ) ON CONFLICT (stream_id, date)
 DO UPDATE SET
     airtime = EXCLUDED.airtime,
@@ -144,6 +156,7 @@ DO UPDATE SET
 		"stream_id":       stream.ID,
 		"user_id":         stream.UserID,
 		"date":            now,
+		"title":           stream.Title,
 		"game_id":         stream.GameID,
 		"peak_viewers":    stream.ViewerCount,
 		"airtime":         airtimeMinutes,
@@ -152,4 +165,35 @@ DO UPDATE SET
 	}
 
 	streamBatchInsert.Queue(stringQuery, args)
+}
+
+func (ts *TwitchScheduler) indexStreamToElastic(stream *handlers.Stream) error {
+	doc := map[string]interface{}{
+		"user_id": stream.UserID,
+		"title":   stream.Title,
+	}
+
+	docBytes, err := json.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal document: %w", err)
+	}
+
+	req := bytes.NewReader(docBytes)
+
+	res, err := ts.es.Index(
+		"stream_stats",
+		req,
+		ts.es.Index.WithDocumentID(stream.ID),
+		ts.es.Index.WithRefresh("true"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to index document: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return fmt.Errorf("elasticsearch indexing error: %s", res.String())
+	}
+
+	return nil
 }

@@ -21,8 +21,7 @@ type StatsHandler struct {
 	kafkaWriter *kafkaW.KafkaWriters
 }
 
-func NewStatsHandler(db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaW.KafkaWriters) *StatsHandler {
-	repo := repository.NewRepository(db)
+func NewStatsHandler(repo *repository.Repository, db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaW.KafkaWriters) *StatsHandler {
 	return &StatsHandler{
 		repo:        repo,
 		pgdb:        db,

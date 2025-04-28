@@ -12,6 +12,7 @@ import (
 type StatsRepo interface {
 	GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error)
 	GetStreamStatsById(ctx context.Context, id string) ([]StreamStats, error)
+	GetAllStats() ([]StreamStats, error)
 }
 
 type statsRepo struct {
@@ -20,6 +21,22 @@ type statsRepo struct {
 
 func NewStatsRepo(db *pgxpool.Pool) StatsRepo {
 	return &statsRepo{db: db}
+}
+func (r *statsRepo) GetAllStats() ([]StreamStats, error) {
+	ctx := context.Background()
+	query := `SELECT * FROM stream_stats`
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("err fetch user stats  %w", err)
+	}
+	defer rows.Close()
+
+	stats, err := pgx.CollectRows(rows, pgx.RowToStructByName[StreamStats])
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("err iterating rows %w", err)
+	}
+
+	return stats, err
 }
 
 func (r *statsRepo) GetUserStatsById(ctx context.Context, id string) ([]StreamStats, error) {

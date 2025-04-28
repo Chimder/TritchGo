@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -41,11 +42,11 @@ func (t *TwitchHandle) GetTopGames() ([]Game, error) {
 
 	if err != nil || respTopGames.StatusCode() != 200 {
 		log.Printf("Unexpected status code: %d, response: %s", respTopGames.StatusCode(), respTopGames.String())
-		return nil, fmt.Errorf("Top Games fetch Err: status code %d", respTopGames.StatusCode())
+		return nil, fmt.Errorf("top Games fetch Err: status code %d", respTopGames.StatusCode())
 	}
 	if len(topGames.Data) == 0 {
 		log.Println("No games returned from API")
-		return nil, fmt.Errorf("No top games found")
+		return nil, errors.New("no top games found")
 	}
 
 	return topGames.Data, nil
@@ -65,10 +66,9 @@ func (t *TwitchHandle) GetTopStream(gameId string) ([]Stream, error) {
 	}).SetResult(topStreamers).Get("https://api.twitch.tv/helix/streams")
 
 	if err != nil || respTopStreamer.StatusCode() != 200 {
-		return nil, fmt.Errorf("Top Stream fetch Err: %v", respTopStreamer.Error())
+		return nil, fmt.Errorf("top Stream fetch Err: %v", respTopStreamer.Error())
 	}
 	return topStreamers.Data, nil
-
 }
 
 func (t *TwitchHandle) GetToken() (string, time.Time, error) {
@@ -81,7 +81,7 @@ func (t *TwitchHandle) GetToken() (string, time.Time, error) {
 
 	if err != nil || resp.StatusCode() != 200 || tokenResp.AccessToken == "" {
 		log.Printf("Err fetch token %v", err)
-		return "", time.Time{}, fmt.Errorf("Err fetch token")
+		return "", time.Time{}, fmt.Errorf("err fetch token")
 	}
 
 	safeExpirationTime := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Add(-10 * time.Hour)
@@ -100,7 +100,7 @@ func (t *TwitchHandle) GetValidToken() (string, error) {
 
 	newToken, expirationTime, err := t.GetToken()
 	if err != nil {
-		return "", fmt.Errorf("Cant fetch new token: %v", err)
+		return "", fmt.Errorf("cant fetch new token: %v", err)
 	}
 
 	token = newToken
