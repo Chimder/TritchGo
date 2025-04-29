@@ -1,4 +1,4 @@
-# version: '3.8'
+version: '3.8'
 
 services:
   postgres:
@@ -32,6 +32,19 @@ services:
     ports:
       - "8081:8081"
 
+  elasticsearch:
+    image: elasticsearch:8.18.0
+    container_name: elasticsearch
+    restart: always
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+
+volumes:
+  pgdata:
+
   # gotritch:
   #   image: gomintv1
   #   container_name: gotritch
@@ -46,8 +59,8 @@ services:
   #   env_file:
   #     - .env
 
-volumes:
-  pgdata:
+# volumes:
+#   pgdata:
 
 # volumes:
 #   postgres_data:
