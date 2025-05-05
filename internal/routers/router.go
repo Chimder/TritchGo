@@ -6,7 +6,7 @@ import (
 	kafkaWriter "tritchgo/internal/kafka"
 	"tritchgo/internal/repository"
 
-	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"

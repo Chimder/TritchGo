@@ -13,21 +13,24 @@ import (
 	"sync"
 	"time"
 	"tritchgo/internal/handlers"
+	"tritchgo/internal/nats"
 
-	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	// "github.com/nats-io/nats.go"
 )
 
 type TwitchScheduler struct {
 	ctx context.Context
 	db  *pgxpool.Pool
 	es  *elasticsearch.Client
+	nc  *nats.NatsProducer
 }
 
-func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client) *TwitchScheduler {
-	return &TwitchScheduler{ctx: ctx, db: db, es: es}
+func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, nc *nats.NatsProducer) *TwitchScheduler {
+	return &TwitchScheduler{ctx: ctx, db: db, es: es, nc: nc}
 }
 
 func nextInterval(duration time.Duration) time.Time {
@@ -39,7 +42,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 7 * time.Minute
+		interval := 2 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -96,11 +99,25 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 
 	var elasticBuf bytes.Buffer
 	var elasticMutex sync.Mutex
-	// var elasticBulkData []map[string]interface{}
 
+	type NatsStreamData struct {
+		StreamID string `json:"stream_id"`
+		UserID   string `json:"user_id"`
+	}
 	for streams := range gameChan {
 		for _, stream := range streams {
 			insertWg.Add(1)
+			ncdata, err := json.Marshal(NatsStreamData{StreamID: stream.ID, UserID: stream.UserID})
+			if err != nil {
+				log.Println("Error marshaling natsData:", err)
+				return err
+			}
+
+			if err := ts.nc.Publish(ts.ctx, "tritch.stats", ncdata); err != nil {
+				log.Println("Error publishing to NATS:", err)
+				return err
+			}
+
 			go func(stream handlers.Stream) {
 				defer insertWg.Done()
 

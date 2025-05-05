@@ -72,6 +72,10 @@ func (st *StatsHandler) GetUserStatsById(w http.ResponseWriter, r *http.Request)
 		utils.WriteError(w, 400, err.Error())
 		return
 	}
+	if len(stats) == 0 {
+		utils.WriteError(w, http.StatusNotFound, "user not found")
+		return
+	}
 
 	resp := StreamStatsResponseListFromDB(stats)
 	data, err := json.Marshal(resp)
@@ -109,6 +113,10 @@ func (st *StatsHandler) GetStreamStatsById(w http.ResponseWriter, r *http.Reques
 	stats, err := st.repo.Stats.GetStreamStatsById(r.Context(), stream_id)
 	if err != nil {
 		utils.WriteError(w, 400, "err get stream from db")
+		return
+	}
+	if len(stats) == 0 {
+		utils.WriteError(w, http.StatusNotFound, "stream not found")
 		return
 	}
 
