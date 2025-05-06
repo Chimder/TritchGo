@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	// "github.com/nats-io/nats.go"
 )
 
 type TwitchScheduler struct {
@@ -42,7 +41,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 2 * time.Minute
+		interval := 15 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -94,6 +93,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	}()
 
 	var insertWg sync.WaitGroup
+	var natsWg sync.WaitGroup
 	var batchMutex sync.Mutex
 	streamBatchInsert := &pgx.Batch{}
 
@@ -107,17 +107,21 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	for streams := range gameChan {
 		for _, stream := range streams {
 			insertWg.Add(1)
+			natsWg.Add(1)
+
 			ncdata, err := json.Marshal(NatsStreamData{StreamID: stream.ID, UserID: stream.UserID})
 			if err != nil {
 				log.Println("Error marshaling natsData:", err)
 				return err
 			}
 
-			if err := ts.nc.Publish(ts.ctx, "tritch.stats", ncdata); err != nil {
-				log.Println("Error publishing to NATS:", err)
-				return err
-			}
+			go func(data []byte) {
+				defer natsWg.Done()
 
+				if err := ts.nc.Publish(ts.ctx, "tritch.stats", data); err != nil {
+					log.Println("Error publishing to NATS:", err)
+				}
+			}(ncdata)
 			go func(stream handlers.Stream) {
 				defer insertWg.Done()
 
@@ -134,7 +138,6 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 				elasticMutex.Lock()
 				ts.indexStreamToElastic(&stream, &elasticBuf)
 				elasticMutex.Unlock()
-
 			}(stream)
 		}
 	}
@@ -150,6 +153,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 
 	log.Printf("Bulk response: %s", elasticRes.Status())
 
+	natsWg.Wait()
 	insertWg.Wait()
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
