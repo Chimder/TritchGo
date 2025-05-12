@@ -25,7 +25,16 @@ export const options = {
 export default function () {
   const urls = [
     "http://localhost:8080/stream/stats?stream_id=318071585529",
+    "http://localhost:8080/stream/stats?stream_id=319893400185",
+    "http://localhost:8080/stream/stats?stream_id=319885216121",
+    "http://localhost:8080/stream/stats?stream_id=323197471869",
+    // "http://localhost:8080/stream/stats?stream_id=323274256893",
     "http://localhost:8080/user/stats?user_id=23161357",
+    "http://localhost:8080/user/stats?user_id=545050196",
+    "http://localhost:8080/user/stats?user_id=97828400",
+    "http://localhost:8080/user/stats?user_id=906801651",
+    "http://localhost:8080/user/stats?user_id=918839982",
+    "http://localhost:8080/user/stats?user_id=29546745",
   ];
 
   urls.forEach((url) => {

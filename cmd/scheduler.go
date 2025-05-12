@@ -41,7 +41,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 15 * time.Minute
+		interval := 3 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
