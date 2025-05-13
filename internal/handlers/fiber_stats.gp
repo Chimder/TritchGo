@@ -62,7 +62,6 @@ func (st *StatsHandler) GetUserStatsById(c *fiber.Ctx) error {
 		})
 	}
 
-	c.Set("Cache-Control", "public, max-age=120")
 	cacheData, err := st.rdb.Get(c.Context(), userId).Result()
 	if err == nil {
 		return c.Status(fiber.StatusOK).Type("json").Send([]byte(cacheData))
@@ -108,7 +107,6 @@ func (st *StatsHandler) GetStreamStatsById(c *fiber.Ctx) error {
 		})
 	}
 
-	c.Set("Cache-Control", "public, max-age=120")
 	cacheData, err := st.rdb.Get(c.Context(), stream_id).Result()
 	if err == nil {
 		return c.Status(fiber.StatusOK).Type("json").Send([]byte(cacheData))

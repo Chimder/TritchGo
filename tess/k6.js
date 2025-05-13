@@ -7,8 +7,11 @@ export const requests = new Counter("http_reqs");
 export const options = {
   stages: [
     // { duration: "1m", target: 500 },
-    { duration: "1m", target: 1200 },
-    { duration: "1m", target: 3000 },
+    // { duration: "1m", target: 1200 },
+    // { duration: "1m", target: 3000 },
+    { duration: "1m", target: 1500 },
+    { duration: "1m", target: 4000 },
+
     // { duration: "1m", target: 3000 },
   ],
   thresholds: {
@@ -24,11 +27,9 @@ export const options = {
 
 export default function () {
   const urls = [
-    "http://localhost:8080/stream/stats?stream_id=318071585529",
     "http://localhost:8080/stream/stats?stream_id=319893400185",
     "http://localhost:8080/stream/stats?stream_id=319885216121",
     "http://localhost:8080/stream/stats?stream_id=323197471869",
-    // "http://localhost:8080/stream/stats?stream_id=323274256893",
     "http://localhost:8080/user/stats?user_id=23161357",
     "http://localhost:8080/user/stats?user_id=545050196",
     "http://localhost:8080/user/stats?user_id=97828400",
