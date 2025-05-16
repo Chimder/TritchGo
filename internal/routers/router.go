@@ -3,8 +3,10 @@ package routers
 import (
 	"net/http"
 	"tritchgo/internal/handlers"
+	kafkaWriter "tritchgo/internal/kafka"
 	"tritchgo/internal/repository"
 
+	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
@@ -16,8 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaWriter.KafkaWriters, els *elasticsearch.Client) *chi.Mux {
-func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
+func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaWriter.KafkaWriters, els *elasticsearch.Client) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
@@ -42,7 +43,7 @@ func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Clien
 		w.Write([]byte("Server is running"))
 	})
 
-	// statsHandle := handlers.NewStatsHandler(repo, pgdb, rdb, kafkaWriter)
+	statsHandle := handlers.NewStatsHandler(repo, pgdb, rdb, kafkaWriter)
 	statsHandle := handlers.NewStatsHandler(repo, pgdb, rdb)
 
 	r.Get("/user/stats", statsHandle.GetUserStatsById)

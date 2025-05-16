@@ -41,7 +41,7 @@ func nextInterval(duration time.Duration) time.Time {
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 3 * time.Minute
+		interval := 15 * time.Minute
 		nextTick := nextInterval(interval)
 
 		log.Printf("Next TICK: %v", nextTick)
@@ -122,6 +122,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 					log.Println("Error publishing to NATS:", err)
 				}
 			}(ncdata)
+
 			go func(stream handlers.Stream) {
 				defer insertWg.Done()
 
@@ -155,6 +156,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 
 	natsWg.Wait()
 	insertWg.Wait()
+
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
 

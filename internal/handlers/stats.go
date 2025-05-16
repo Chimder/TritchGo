@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"time"
+	kafkaW "tritchgo/internal/kafka"
 	"tritchgo/internal/repository"
 	"tritchgo/utils"
 
@@ -16,16 +17,15 @@ type StatsHandler struct {
 	pgdb *pgxpool.Pool
 	repo *repository.Repository
 	rdb  *redis.Client
-	// kafkaWriter *kafkaW.KafkaWriters
+	kafkaWriter *kafkaW.KafkaWriters
 }
 
-// func NewStatsHandler(repo *repository.Repository, db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaW.KafkaWriters) *StatsHandler {
-func NewStatsHandler(repo *repository.Repository, db *pgxpool.Pool, rdb *redis.Client) *StatsHandler {
+func NewStatsHandler(repo *repository.Repository, db *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaW.KafkaWriters) *StatsHandler {
 	return &StatsHandler{
-		repo: repo,
-		pgdb: db,
-		rdb:  rdb,
-		// kafkaWriter: kafkaWriter,
+		repo:        repo,
+		pgdb:        db,
+		rdb:         rdb,
+		kafkaWriter: kafkaWriter,
 	}
 }
 

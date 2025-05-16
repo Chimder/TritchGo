@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 	"tritchgo/db"
+	"tritchgo/internal/handlers"
 	"tritchgo/internal/kafka"
+	"tritchgo/internal/nats"
 	"tritchgo/internal/repository"
 	"tritchgo/internal/routers"
 )
@@ -21,7 +23,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// twitchHandle := handlers.NewTwitchHandle()
+	twitchHandle := handlers.NewTwitchHandle()
 	pgdb, err := db.DBConn(ctx)
 	if err != nil {
 		log.Fatalf("Fatal conn to db: %v", err)
@@ -30,14 +32,14 @@ func main() {
 
 	repo := repository.NewRepository(pgdb)
 
-	// els := db.NewElasticDB()
-	// err = els.Mapping()
-	// if err != nil {
-	// 	log.Fatalf("Fatal conn to elasticsearch: %v", err)
-	// }
+	els := db.NewElasticDB()
+	err = els.Mapping()
+	if err != nil {
+		log.Fatalf("Fatal conn to elasticsearch: %v", err)
+	}
 
-	// natsStream := nats.NewNatsProducer(ctx)
-	// defer natsStream.Close()
+	natsStream := nats.NewNatsProducer(ctx)
+	defer natsStream.Close()
 
 	rdb := db.RedisDb()
 	defer rdb.Close()
@@ -46,10 +48,9 @@ func main() {
 	defer kafkaProducer.Close()
 
 	go StartGRPCServer(pgdb)
-	// go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream).StartFetchLoop(twitchHandle)
+	go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream).StartFetchLoop(twitchHandle)
 
-	// r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
-	r := routers.NewRouter(repo, pgdb, rdb)
+	r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
 	server := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,
