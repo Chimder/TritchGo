@@ -1,31 +1,28 @@
 package utils
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
+	"log/slog"
+
+	"github.com/gin-gonic/gin"
 )
 
-func WriteJSON(w http.ResponseWriter, status int, v interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "JSON encoding error: %v"}`, err), http.StatusInternalServerError)
-	}
+func WriteJSON(c *gin.Context, status int, v interface{}) {
+	c.JSON(status, v)
 }
 
-func WriteJSONRedis(w http.ResponseWriter, status int, data []byte) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	w.Write(data)
+func WriteJSONRedis(c *gin.Context, status int, data []byte) {
+	c.Data(status, "application/json", data)
 }
 
-func WriteError(w http.ResponseWriter, status int, err string) {
-	w.WriteHeader(status)
-	log.Print(err)
-	if err := json.NewEncoder(w).Encode(map[string]string{"err": err}); err != nil {
-		http.Error(w, `{"err": err encode error}`, status)
+func WriteError(c *gin.Context, status int, err string) {
+	slog.Error("HTTP", "err:", err)
+	c.AbortWithStatusJSON(status, gin.H{"err": err})
+}
+
+func GinParseJSON(c *gin.Context, v interface{}) error {
+	if err := c.ShouldBindJSON(v); err != nil {
+		return fmt.Errorf("error decoding JSON: %w", err)
 	}
+	return nil
 }

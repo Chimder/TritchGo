@@ -7,9 +7,9 @@ import (
 	"tritchgo/internal/repository"
 
 	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/cors"
+	"github.com/gin-gonic/gin"
+
+	"github.com/gin-contrib/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
@@ -18,15 +18,15 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaWriter.KafkaWriters, els *elasticsearch.Client) *chi.Mux {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"https://*", "http://*"},
-		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
+func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Client, kafkaWriter *kafkaWriter.KafkaWriters, els *elasticsearch.Client) *gin.Engine {
+	r := gin.Default()
+	// r.Use(gin.Logger())
+	// r.Use(gin.Recovery())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"https://*", "http://*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposeHeaders:    []string{"Link"},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
@@ -37,18 +37,20 @@ func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Clien
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
-	r.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	r.GET("/metrics", gin.WrapH(promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg})))
 
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Server is running"))
+	r.GET("/health", func(c *gin.Context) {
+		c.String(http.StatusOK, "Server is running")
 	})
 
 	statsHandle := handlers.NewStatsHandler(repo, pgdb, rdb, kafkaWriter)
-	statsHandle := handlers.NewStatsHandler(repo, pgdb, rdb)
 
-	r.Get("/user/stats", statsHandle.GetUserStatsById)
-	r.Get("/stream/stats", statsHandle.GetStreamStatsById)
-	r.Get("/redis", statsHandle.Test)
+	api := r.Group("/")
+	{
+		api.GET("/user/stats", statsHandle.GetUserStatsById)
+		api.GET("/stream/stats", statsHandle.GetStreamStatsById)
+		api.GET("/redis", statsHandle.Test)
+	}
 
 	return r
 }

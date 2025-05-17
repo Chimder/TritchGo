@@ -51,7 +51,8 @@ func main() {
 	go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream).StartFetchLoop(twitchHandle)
 
 	r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
-	server := &http.Server{
+
+	srv := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,
 		ReadTimeout:  5 * time.Second,
@@ -60,8 +61,7 @@ func main() {
 	}
 
 	go func() {
-		slog.Info("Server started on :8080")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
@@ -72,7 +72,7 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("Server shutdown error", "error", err)
 	} else {
 		slog.Info("Server stopped gracefully")
