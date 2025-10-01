@@ -4,14 +4,13 @@ import (
 	"context"
 	"log"
 	"time"
-	"tritchgo/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
 
-func DBConn(ctx context.Context) (*pgxpool.Pool, error) {
-	url := config.LoadEnv().DBUrl
+func DBConn(ctx context.Context, url string) (*pgxpool.Pool, error) {
+	// url := config.LoadEnv().DBUrl
 
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {

@@ -72,10 +72,9 @@ func (h *MinimalHandler) WithGroup(name string) slog.Handler {
 	return h
 }
 
-func LoggerInit() {
-	debug := config.LoadEnv().Debug
+func LoggerInit(env *config.EnvVars) {
 	var handler slog.Handler
-	if debug {
+	if env.Debug {
 		handler = &MinimalHandler{
 			opts: &slog.HandlerOptions{
 				Level: slog.LevelDebug,

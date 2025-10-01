@@ -22,7 +22,7 @@ services:
 
   pgweb:
     image: sosedoff/pgweb
-    container_name: pgweb
+    container_name: pgwebTritch
     restart: always
     depends_on:
       - postgres
@@ -63,6 +63,7 @@ volumes:
 
 # volumes:
 #   postgres_data:
+
 # version: '3'
 # services:
 #   prometheus:

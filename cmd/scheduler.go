@@ -28,31 +28,36 @@ type TwitchScheduler struct {
 	nc  *nats.NatsProducer
 }
 
-func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, nc *nats.NatsProducer) *TwitchScheduler {
-	return &TwitchScheduler{ctx: ctx, db: db, es: es, nc: nc}
+func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client) *TwitchScheduler {
+	// func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, nc *nats.NatsProducer) *TwitchScheduler {
+	// return &TwitchScheduler{ctx: ctx, db: db, es: es, nc: nc}
+	return &TwitchScheduler{ctx: ctx, db: db, es: es}
 }
 
-func nextInterval(duration time.Duration) time.Time {
-	now := time.Now()
-	minutes := now.Minute()
-	nextMinutes := (minutes/int(duration.Minutes()) + 1) * int(duration.Minutes())
-	return time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), nextMinutes, 0, 0, now.Location())
+func NextInterval(interval int) time.Duration {
+	return NextIntervalAt(time.Now(), interval)
+}
+
+func NextIntervalAt(now time.Time, interval int) time.Duration {
+	currentMin := now.Minute()
+	remaind := currentMin % interval
+	nextMin := interval - remaind
+	return time.Duration(nextMin) * time.Minute
 }
 
 func (ts *TwitchScheduler) StartFetchLoop(twitchHandle *handlers.TwitchHandle) {
 	for {
-		interval := 15 * time.Minute
-		nextTick := nextInterval(interval)
+		// interval := 19 * time.Minute
+		waitTick := NextInterval(5)
 
-		log.Printf("Next TICK: %v", nextTick)
-		time.Sleep(time.Until(nextTick))
+		log.Printf("Wait tick: %v", waitTick)
+		time.Sleep(waitTick)
 
 		err := ts.fetchAndStoreTopGames(twitchHandle)
 		if err != nil {
 			slog.Error("FetchAndStoreTopGames:", "Error", err)
 		}
 
-		time.Sleep(3 * time.Minute)
 	}
 }
 
@@ -93,7 +98,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	}()
 
 	var insertWg sync.WaitGroup
-	var natsWg sync.WaitGroup
+	// var natsWg sync.WaitGroup
 	var batchMutex sync.Mutex
 	streamBatchInsert := &pgx.Batch{}
 
@@ -107,21 +112,21 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	for streams := range gameChan {
 		for _, stream := range streams {
 			insertWg.Add(1)
-			natsWg.Add(1)
+			// natsWg.Add(1)
 
-			ncdata, err := json.Marshal(NatsStreamData{StreamID: stream.ID, UserID: stream.UserID})
-			if err != nil {
-				log.Println("Error marshaling natsData:", err)
-				return err
-			}
+			// ncdata, err := json.Marshal(NatsStreamData{StreamID: stream.ID, UserID: stream.UserID})
+			// if err != nil {
+			// 	log.Println("Error marshaling natsData:", err)
+			// 	return err
+			// }
 
-			go func(data []byte) {
-				defer natsWg.Done()
+			// go func(data []byte) {
+			// 	defer natsWg.Done()
 
-				if err := ts.nc.Publish(ts.ctx, "tritch.stats", data); err != nil {
-					log.Println("Error publishing to NATS:", err)
-				}
-			}(ncdata)
+			// if err := ts.nc.Publish(ts.ctx, "tritch.stats", data); err != nil {
+			// 	log.Println("Error publishing to NATS:", err)
+			// }
+			// }(ncdata)
 
 			go func(stream handlers.Stream) {
 				defer insertWg.Done()
@@ -154,7 +159,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 
 	log.Printf("Bulk response: %s", elasticRes.Status())
 
-	natsWg.Wait()
+	// natsWg.Wait()
 	insertWg.Wait()
 
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)

@@ -8,7 +8,7 @@ import (
 
 func RedisDb() *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
+		Addr:         "localhost:6379",
 		DB:           0,
 		PoolSize:     100,
 		MinIdleConns: 10,
