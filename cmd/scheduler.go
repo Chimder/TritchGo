@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"math"
 	"strings"
 	"sync"
 	"time"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/nats"
+	"tritchgo/internal/repository"
 
 	"github.com/elastic/go-elasticsearch/v9"
 	"github.com/jackc/pgx/v5"
@@ -22,16 +22,17 @@ import (
 )
 
 type TwitchScheduler struct {
-	ctx context.Context
-	db  *pgxpool.Pool
-	es  *elasticsearch.Client
-	nc  *nats.NatsProducer
+	ctx  context.Context
+	db   *pgxpool.Pool
+	es   *elasticsearch.Client
+	nc   *nats.NatsProducer
+	repo *repository.Repository
 }
 
-func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client) *TwitchScheduler {
-	// func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, nc *nats.NatsProducer) *TwitchScheduler {
+// func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, nc *nats.NatsProducer) *TwitchScheduler {
+func NewTwitchScheduler(ctx context.Context, db *pgxpool.Pool, es *elasticsearch.Client, repo *repository.Repository) *TwitchScheduler {
+	return &TwitchScheduler{ctx: ctx, db: db, es: es, repo: repo}
 	// return &TwitchScheduler{ctx: ctx, db: db, es: es, nc: nc}
-	return &TwitchScheduler{ctx: ctx, db: db, es: es}
 }
 
 func NextInterval(interval int) time.Duration {
@@ -137,8 +138,15 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 					return
 				}
 
+				queryStr, nameArg := ts.repo.Stats.BuildInsertQuery(&repository.StreamArg{ID: stream.ID,
+					UserID:      stream.UserID,
+					Title:       stream.Title,
+					GameID:      stream.GameID,
+					ViewerCount: stream.ViewerCount},
+					startedAt)
+
 				batchMutex.Lock()
-				ts.insertStreamStats(&stream, streamBatchInsert, startedAt)
+				streamBatchInsert.Queue(queryStr, nameArg)
 				batchMutex.Unlock()
 
 				elasticMutex.Lock()
@@ -200,32 +208,3 @@ func (ts *TwitchScheduler) indexStreamToElastic(stream *handlers.Stream, buf *by
 	return nil
 }
 
-func (ts *TwitchScheduler) insertStreamStats(stream *handlers.Stream, streamBatchInsert *pgx.Batch, startedAt time.Time) {
-	now := time.Now().UTC()
-	airtimeDuration := now.Sub(startedAt)
-	airtimeMinutes := int(math.Round(airtimeDuration.Minutes()))
-
-	stringQuery := `INSERT INTO stream_stats (
-    stream_id, user_id, game_id, date, title, airtime, peak_viewers, average_viewers, hours_watched
-) VALUES (
-  @stream_id, @user_id, @game_id, @date, @title, @airtime, @peak_viewers, @average_viewers, @hours_watched
-) ON CONFLICT (stream_id, date)
-DO UPDATE SET
-    airtime = EXCLUDED.airtime,
-    peak_viewers = GREATEST(stream_stats.peak_viewers, EXCLUDED.peak_viewers),
-    average_viewers = ROUND(stream_stats.average_viewers + EXCLUDED.average_viewers) / 2,
-    hours_watched = stream_stats.hours_watched + ROUND(EXCLUDED.average_viewers * (EXCLUDED.airtime / 60.0)); `
-	args := pgx.NamedArgs{
-		"stream_id":       stream.ID,
-		"user_id":         stream.UserID,
-		"date":            now,
-		"title":           stream.Title,
-		"game_id":         stream.GameID,
-		"peak_viewers":    stream.ViewerCount,
-		"airtime":         airtimeMinutes,
-		"average_viewers": stream.ViewerCount,
-		"hours_watched":   0,
-	}
-
-	streamBatchInsert.Queue(stringQuery, args)
-}

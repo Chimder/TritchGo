@@ -50,7 +50,7 @@ func main() {
 
 	go StartGRPCServer(pgdb)
 	// go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream).StartFetchLoop(twitchHandle)
-	go NewTwitchScheduler(ctx, pgdb, els.GetClient()).StartFetchLoop(twitchHandle)
+	go NewTwitchScheduler(ctx, pgdb, els.GetClient(), repo).StartFetchLoop(twitchHandle)
 
 	r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
 

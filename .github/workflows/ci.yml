@@ -33,6 +33,13 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: go test -v ./...
 
+      - name: Cache Docker
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-buildx-
+
       - name: Build Docker image
         run: docker build -t tritchgo:latest .
 
