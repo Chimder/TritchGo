@@ -3,7 +3,7 @@ module tritchgo
 go 1.25.1
 
 require (
-	github.com/caarlos0/env/v10 v10.0.0
+	github.com/brianvoe/gofakeit/v7 v7.7.3
 	github.com/elastic/go-elasticsearch/v9 v9.1.0
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.11.0
@@ -28,7 +28,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/brianvoe/gofakeit/v7 v7.7.3 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.14.1 // indirect
 	github.com/bytedance/sonic/loader v0.3.0 // indirect

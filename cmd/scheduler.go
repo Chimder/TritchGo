@@ -91,6 +91,7 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 
 			gameChan <- streams
 		}(game.ID)
+
 	}
 
 	go func() {
@@ -155,6 +156,8 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 			}(stream)
 		}
 	}
+	// natsWg.Wait()
+	insertWg.Wait()
 
 	elasticRes, err := ts.es.Bulk(
 		strings.NewReader(elasticBuf.String()),
@@ -166,9 +169,6 @@ func (ts *TwitchScheduler) fetchAndStoreTopGames(twitchHandle *handlers.TwitchHa
 	defer elasticRes.Body.Close()
 
 	log.Printf("Bulk response: %s", elasticRes.Status())
-
-	// natsWg.Wait()
-	insertWg.Wait()
 
 	res := ts.db.SendBatch(ts.ctx, streamBatchInsert)
 	defer res.Close()
@@ -207,4 +207,3 @@ func (ts *TwitchScheduler) indexStreamToElastic(stream *handlers.Stream, buf *by
 	}
 	return nil
 }
-
