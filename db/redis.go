@@ -6,9 +6,9 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func RedisDb() *redis.Client {
+func RedisDb(addr string) *redis.Client {
 	client := redis.NewClient(&redis.Options{
-		Addr:         "localhost:6379",
+		Addr:         addr,
 		DB:           0,
 		PoolSize:     100,
 		MinIdleConns: 10,

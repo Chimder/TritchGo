@@ -49,7 +49,6 @@ func NewRouter(repo *repository.Repository, pgdb *pgxpool.Pool, rdb *redis.Clien
 	{
 		api.GET("/user/stats", statsHandle.GetUserStatsById)
 		api.GET("/stream/stats", statsHandle.GetStreamStatsById)
-		api.GET("/redis", statsHandle.Test)
 	}
 
 	return r

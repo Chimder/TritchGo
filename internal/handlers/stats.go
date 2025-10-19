@@ -30,30 +30,6 @@ func NewStatsHandler(repo *repository.Repository, db *pgxpool.Pool, rdb *redis.C
 	}
 }
 
-func (st *StatsHandler) Test(c *gin.Context) {
-	newmap := map[string]string{"test1": "lox", "test2": "lox2"}
-	cache, err := st.rdb.HGetAll(c.Request.Context(), "test").Result()
-	if err != nil {
-		log.Print("Redis error:", err)
-	}
-
-	if len(cache) > 0 {
-		log.Print("from cache")
-		utils.WriteJSON(c, 200, cache)
-		return
-	}
-
-	log.Print("start set")
-	err = st.rdb.HSet(c.Request.Context(), "test", newmap).Err()
-	if err != nil {
-		utils.WriteError(c, 500, "Err fetch user stats")
-		return
-	}
-	st.rdb.Expire(c.Request.Context(), "test", 30*time.Second)
-	log.Print("form map")
-	utils.WriteJSON(c, 200, newmap)
-}
-
 func (st *StatsHandler) GetUserStatsById(c *gin.Context) {
 	userId := c.Query("user_id")
 	if userId == "" {

@@ -14,7 +14,7 @@ message UserStatsRequest {
 }
 
 message UserStatsResponse {
-  repeated StreamStats stats = 1;
+  repeated StreamStats user_stats = 1;
 }
 
 message StreamStatsRequest {
@@ -22,7 +22,7 @@ message StreamStatsRequest {
 }
 
 message StreamStatsResponse {
-  repeated StreamStats stats = 1;
+  repeated StreamStats stream_stats = 1;
 }
 
 message StreamStats {

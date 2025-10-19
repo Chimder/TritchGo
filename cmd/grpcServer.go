@@ -46,7 +46,7 @@ func (s *StatsServer) GetUserStats(ctx context.Context, req *stream_stats.UserSt
 		})
 	}
 
-	return &stream_stats.UserStatsResponse{Stats: protoStats}, nil
+	return &stream_stats.UserStatsResponse{UserStats: protoStats}, nil
 }
 
 func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream_stats.StreamStatsRequest) (*stream_stats.StreamStatsResponse, error) {
@@ -69,7 +69,7 @@ func (s *StatsServer) GetStreamStats(ctx context.Context, req *stream_stats.Stre
 		})
 
 	}
-	return &stream_stats.StreamStatsResponse{Stats: protoStats}, nil
+	return &stream_stats.StreamStatsResponse{StreamStats: protoStats}, nil
 }
 
 func StartGRPCServer(db *pgxpool.Pool) {

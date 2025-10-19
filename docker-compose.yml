@@ -40,29 +40,17 @@ services:
     ports:
       - "9200:9200"
 
+  nats:
+    image: nats:latest
+    container_name: nats
+    restart: always
+    command: ["-js"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
 volumes:
   pgdata:
-
-  # gotritch:
-  #   image: gomintv1
-  #   container_name: gotritch
-  #   restart: always
-  #   depends_on:
-  #     - postgres
-  #     - redis
-  #   environment:
-  #     DB_URL: "postgresql://postgres:postgres@GoStats:5432/postgres?sslmode=disable"
-  #   ports:
-  #     - "8080:8080"
-  #   env_file:
-  #     - .env
-# volumes:
-#   pgdata:
-
-# volumes:
-#   postgres_data:
-
-# version: '3'
 # services:
 #   prometheus:
 #     image: prom/prometheus
@@ -97,34 +85,3 @@ volumes:
 #   monitoring:
 #     driver: bridge
 
-# services:
-#   postgres:
-#     image: postgres:latest
-#     container_name: postgresV2
-#     ports:
-#       - "5432:5432"
-#     environment:
-#       POSTGRES_USER: postgres
-#       POSTGRES_PASSWORD: postgres
-#       POSTGRES_DB: postgres
-#     networks:
-#       - tritch-network
-
-#   app:
-#     build: .
-#     ports:
-#       - "8080:8080"
-#     # env_file:
-#     #   - .env
-#     environment:
-#       DB_URL: postgresql://postgres:postgres@postgresV2:5432/postgres?sslmode=disable
-#       CLIENT_ID: ${CLIENT_ID}
-#       CLIENT_SECRET: ${CLIENT_SECRET}
-#     depends_on:
-#       - postgres
-#     networks:
-#       - tritch-network
-
-# networks:
-#   tritch-network:
-#     driver: bridge

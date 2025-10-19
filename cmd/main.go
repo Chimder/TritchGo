@@ -13,6 +13,7 @@ import (
 	"tritchgo/db"
 	"tritchgo/internal/handlers"
 	"tritchgo/internal/kafka"
+	"tritchgo/internal/nats"
 	"tritchgo/internal/repository"
 	"tritchgo/internal/routers"
 )
@@ -39,18 +40,17 @@ func main() {
 		log.Fatalf("Fatal conn to elasticsearch: %v", err)
 	}
 
-	// natsStream := nats.NewNatsProducer(ctx)
-	// defer natsStream.Close()
+	natsStream := nats.NewNatsProducer(ctx)
+	defer natsStream.Close()
 
-	rdb := db.RedisDb()
+	rdb := db.RedisDb(env.Redis)
 	defer rdb.Close()
 
 	kafkaProducer := kafka.NewKafkaWriters()
 	defer kafkaProducer.Close()
 
 	go StartGRPCServer(pgdb)
-	// go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream).StartFetchLoop(twitchHandle)
-	go NewTwitchScheduler(ctx, pgdb, els.GetClient(), repo).StartFetchLoop(twitchHandle)
+	go NewTwitchScheduler(ctx, pgdb, els.GetClient(), natsStream, repo).StartFetchLoop(twitchHandle)
 
 	r := routers.NewRouter(repo, pgdb, rdb, kafkaProducer, els.GetClient())
 

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"testing"
 	"time"
 	"tritchgo/config"
@@ -13,8 +12,6 @@ import (
 // func TestGetTopStream(t *testing.T) {}
 func TestGetToken(t *testing.T) {
 	cfg := config.LoadEnv()
-	log.Printf("ID %s", cfg.ClientID)
-	log.Printf("SECRET %s", cfg.ClientSecret)
 	handlerTwitch := NewTwitchHandle(cfg)
 	assert.NotNil(t, handlerTwitch)
 
@@ -28,13 +25,13 @@ func TestGetToken(t *testing.T) {
 		require.NotEmpty(t, time)
 	})
 
-	log.Printf("TIME1 %v", time)
 	t.Run("Get valid token", func(t *testing.T) {
 		valid, err := handlerTwitch.GetValidToken()
 		assert.NoError(t, err)
 		assert.NotEmpty(t, valid)
 		assert.Equal(t, token, valid)
 	})
+
 
 	t.Run("Get top games", func(t *testing.T) {
 		topGames, err := handlerTwitch.GetTopGames()

@@ -13,6 +13,7 @@ type EnvVars struct {
 	ClientID     string `env:"CLIENT_ID"`
 	ClientSecret string `env:"CLIENT_SECRET"`
 	DBUrl        string `env:"DB_URL"`
+	Redis        string `env:"REDIS"`
 	Debug        bool   `env:"DEBUG"`
 }
 

@@ -52,7 +52,7 @@ func GetSteam() *StreamArg {
 	stream := StreamArg{
 		ID:          gofakeit.UUID(),
 		UserID:      gofakeit.DigitN(9),
-		Title:       gofakeit.Sentence(3),
+		Title:       gofakeit.Sentence(),
 		GameID:      gofakeit.DigitN(6),
 		ViewerCount: gofakeit.IntRange(0, 100000),
 	}
